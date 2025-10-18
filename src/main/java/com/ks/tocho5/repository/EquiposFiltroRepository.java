@@ -8,8 +8,9 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import com.ks.tocho5.model.EquiposProjection;
+import com.ks.tocho5.model.EquiposStatsModel;
 
-public interface EquiposFiltroRepository extends JpaRepository<Object, Integer>{
+public interface EquiposFiltroRepository extends JpaRepository<EquiposStatsModel, Integer>{
 	@Query(
 		    value = """
 		      SELECT 

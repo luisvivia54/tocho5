@@ -8,11 +8,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 @Table(name = "team_enrollment")
 public class EquiposStatsModel {
 
-  // =========================
-  // Campos (variables al inicio)
-  // =========================
 
-  /**
+	  /**
 	 * @return the enrollment_id
 	 */
 	public Integer getEnrollment_id() {
@@ -41,20 +38,6 @@ public class EquiposStatsModel {
 	}
 
 	/**
-	 * @return the season_id
-	 */
-	public Integer getSeason_id() {
-		return season_id;
-	}
-
-	/**
-	 * @param season_id the season_id to set
-	 */
-	public void setSeason_id(Integer season_id) {
-		this.season_id = season_id;
-	}
-
-	/**
 	 * @return the category_id
 	 */
 	public Integer getCategory_id() {
@@ -69,57 +52,36 @@ public class EquiposStatsModel {
 	}
 
 	/**
-	 * @return the registered_at
+	 * @return the season_id
 	 */
-	public LocalDateTime getRegistered_at() {
-		return registered_at;
+	public Integer getSeason_id() {
+		return season_id;
 	}
 
 	/**
-	 * @param registered_at the registered_at to set
+	 * @param season_id the season_id to set
 	 */
-	public void setRegistered_at(LocalDateTime registered_at) {
-		this.registered_at = registered_at;
+	public void setSeason_id(Integer season_id) {
+		this.season_id = season_id;
 	}
 
-	/**
-	 * @return the is_active
-	 */
-	public Boolean getIs_active() {
-		return is_active;
-	}
+	@Id
+	  @GeneratedValue(strategy = GenerationType.IDENTITY) // ajusta si no es autoincrement
+	  @Column(name = "enrollment_id")
+	  private Integer enrollment_id;
 
-	/**
-	 * @param is_active the is_active to set
-	 */
-	public void setIs_active(Boolean is_active) {
-		this.is_active = is_active;
-	}
-
-@Override
+	  @Override
 	public String toString() {
-		return "EquiposStatsModel [enrollment_id=" + enrollment_id + ", team_id=" + team_id + ", season_id=" + season_id
-				+ ", category_id=" + category_id + ", registered_at=" + registered_at + ", is_active=" + is_active
-				+ "]";
+		return "EquiposStatsModel [enrollment_id=" + enrollment_id + ", team_id=" + team_id + ", category_id="
+				+ category_id + ", season_id=" + season_id + "]";
 	}
 
-@Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY) // AUTO_INCREMENT en MySQL
-  @Column(name = "enrollment_id", nullable = false)
-  private Integer enrollment_id;
+	@Column(name = "team_id")
+	  private Integer team_id;
 
-  @Column(name = "team_id", nullable = false)
-  private Integer team_id;
+	  @Column(name = "category_id")
+	  private Integer category_id;
 
-  @Column(name = "season_id", nullable = false)
-  private Integer season_id;
-
-  @Column(name = "category_id")
-  private Integer category_id;
-
-  @Column(name = "registered_at")
-  private LocalDateTime registered_at;
-
-  @Column(name = "is_active")
-  private Boolean is_active;
+	  @Column(name = "season_id")
+	  private Integer season_id;
 }
