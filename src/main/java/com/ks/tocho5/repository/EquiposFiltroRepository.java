@@ -39,8 +39,8 @@ public interface EquiposFiltroRepository extends JpaRepository<EquiposStatsModel
 		  )
 		  Page<EquiposProjection> searchTeams(
 		      @Param("name") String name,
-		      @Param("categoryId") Integer category_id,
-		      @Param("seasonId") Integer season_id,
+		      @Param("category_id") Integer category_id,
+		      @Param("season_id") Integer season_id,
 		      Pageable pageable
 		  );
 }
