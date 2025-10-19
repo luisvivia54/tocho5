@@ -28,7 +28,7 @@ public class EquipoStatsService {
     );
 
     return p.map(r -> new EquiposStatsDTO(
-        r.getteam_id(), r.getname(), r.getcategory_id(), r.getseason_id()
+        r.getTeam_id(), r.getName(), r.getCategory_id(), r.getSeason_id()
     ));
   }
 }
