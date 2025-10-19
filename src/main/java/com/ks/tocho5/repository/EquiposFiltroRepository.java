@@ -24,7 +24,7 @@ public interface EquiposFiltroRepository extends JpaRepository<EquiposStatsModel
 		        (:name IS NULL OR LOWER(t.name) LIKE LOWER(CONCAT('%', :name, '%')))
 		        AND (:category_id IS NULL OR e.category_id = :category_id)
 		        AND (:season_id  IS NULL OR e.season_id  = :season_id)
-		        AND (:teamId    IS NULL OR e.team_id    = :teamId) 
+		        AND (:team_id    IS NULL OR e.team_id    = :team_id) 
 		      ORDER BY t.name ASC
 		      """,
 		    countQuery = """
