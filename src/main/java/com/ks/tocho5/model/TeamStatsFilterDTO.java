@@ -8,6 +8,7 @@ public class TeamStatsFilterDTO {
 	public String name;       // filtro por nombre contiene
 	  public Integer category_id;
 	  public Integer season_id;
+	  public Integer team_id;
 
 	  // paginación simple
 	  public Integer page;   // default 0

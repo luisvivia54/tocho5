@@ -24,7 +24,7 @@ public class EquipoStatsService {
     String name = (f.name != null && !f.name.isBlank()) ? f.name.trim() : null;
 
     Page<EquiposProjection> p = repo.searchTeams(
-        name, f.category_id, f.season_id, pageable
+        name, f.category_id, f.season_id, f.team_id, pageable
     );
 
     return p.map(r -> new EquiposStatsDTO(

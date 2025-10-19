@@ -24,6 +24,7 @@ public interface EquiposFiltroRepository extends JpaRepository<EquiposStatsModel
 		        (:name IS NULL OR LOWER(t.name) LIKE LOWER(CONCAT('%', :name, '%')))
 		        AND (:category_id IS NULL OR e.category_id = :category_id)
 		        AND (:season_id  IS NULL OR e.season_id  = :season_id)
+		        AND (:teamId    IS NULL OR e.team_id    = :teamId) 
 		      ORDER BY t.name ASC
 		      """,
 		    countQuery = """
@@ -41,6 +42,7 @@ public interface EquiposFiltroRepository extends JpaRepository<EquiposStatsModel
 		      @Param("name") String name,
 		      @Param("category_id") Integer category_id,
 		      @Param("season_id") Integer season_id,
+		      @Param("team_id") Integer team_id,
 		      Pageable pageable
 		  );
 }
