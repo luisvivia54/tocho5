@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_NULL) // al serializar, omite llaves null
 public class TeamStatsFilterDTO {
 	public String name;       // filtro por nombre contiene
-	  public Integer categoryId;
-	  public Integer seasonId;
+	  public Integer category_id;
+	  public Integer season_id;
 
 	  // paginación simple
 	  public Integer page;   // default 0
