@@ -1,5 +1,8 @@
 package com.ks.tocho5.model;
 
+import jakarta.persistence.Entity;
+
+@Entity
 public class GameModel{
 	@Override
 	public String toString() {
