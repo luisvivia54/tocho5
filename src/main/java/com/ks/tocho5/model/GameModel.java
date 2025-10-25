@@ -7,13 +7,13 @@ import jakarta.persistence.Id;
 public class GameModel{
 	@Override
 	public String toString() {
-		return "DatoValorDTO [local_team=" + local_team + ", away_team=" + away_team + ", status=" + status + ", game_id="+ game_id+ "]";
+		return "DatoValorDTO [local_team=" + home_score + ", away_team=" + away_score + ", game_id="+ game_id+ "]";
 	}
-	private Integer local_team;
-	private Integer away_team;
+	private Integer home_score;
+	private Integer away_score;
 	@Id
 	private Integer game_id;
-	private String status;
+
 	/**
 	 * @return the local_team
 	 */
@@ -26,39 +26,31 @@ public class GameModel{
 	public void setGame_id(Integer game_id) {
 		this.game_id = game_id;
 	}
-	public Integer getLocal_team() {
-		return local_team;
+	public Integer getHome_score() {
+		return home_score;
 	}
 	/**
 	 * @param local_team the local_team to set
 	 */
-	public void setLocal_team(Integer local_team) {
-		this.local_team = local_team;
+	public void setHome_score(Integer home_score) {
+		this.home_score = home_score;
 	}
 	/**
 	 * @return the away_team
 	 */
-	public Integer getAway_team() {
-		return away_team;
+	public Integer getAway_score() {
+		return away_score;
 	}
 	/**
-	 * @param away_team the away_team to set
+	 * @param away_score the away_team to set
 	 */
-	public void setAway_team(Integer away_team) {
-		this.away_team = away_team;
+	public void setAway_score(Integer away_score) {
+		this.away_score = away_score;
 	}
 	/**
 	 * @return the status
 	 */
-	public String getStatus() {
-		return status;
-	}
-	/**
-	 * @param status the status to set
-	 */
-	public void setStatus(String status) {
-		this.status = status;
-	}
+
 	
 	
 }
