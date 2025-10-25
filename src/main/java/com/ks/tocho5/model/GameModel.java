@@ -1,6 +1,7 @@
 package com.ks.tocho5.model;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 
 @Entity
 public class GameModel{
@@ -10,6 +11,7 @@ public class GameModel{
 	}
 	private Integer local_team;
 	private Integer away_team;
+	@Id
 	private Integer game_id;
 	private String status;
 	/**
