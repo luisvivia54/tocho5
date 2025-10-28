@@ -20,6 +20,9 @@ public class GameService {
 		try {
 			juegosrepo.save(gamemodel);
 			juegostatus.finishById(gamemodel.getGame_id());
+			if (gamemodel.getHome_score() > gamemodel.getAway_score()){
+				return "ok";
+			}
 		}catch(Exception e) {
 			e.printStackTrace();
 			return e.getMessage();

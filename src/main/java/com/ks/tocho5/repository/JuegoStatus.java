@@ -11,7 +11,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer>{
 
 	  @Modifying(clearAutomatically = true, flushAutomatically = true)
 	  @Transactional
-	  @Query("update GameStatusModel g set g.status = :status where g.gameId = :id")
+	  @Query("update GameStatusModel g set g.status = :status where g.game_id = :id")
 	  int updateStatus(@Param("id") Integer gameId, @Param("status") String status);
 
 	  @Transactional
