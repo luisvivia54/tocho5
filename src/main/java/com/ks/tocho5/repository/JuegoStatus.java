@@ -16,6 +16,6 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer>{
 
 	  @Transactional
 	  default int finishById(Integer gameId) {
-	    return updateStatus(gameId, "FINISHED");
+	    return updateStatus(gameId, "FINAL");
 	  }
 }
