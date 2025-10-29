@@ -9,7 +9,6 @@ import com.ks.tocho5.model.GameModel;
 import com.ks.tocho5.model.GameStatusModel;
 import com.ks.tocho5.model.StandingTeamModel;
 import com.ks.tocho5.model.TeamStatsFilterDTO;
-import com.ks.tocho5.model.DatoValorDTO;
 import com.ks.tocho5.model.EquiposModel;
 import com.ks.tocho5.repository.EquiposRepository;
 import com.ks.tocho5.repository.JuegoStatus;
@@ -45,7 +44,7 @@ public class Controller {
   }
   @GetMapping("/points")
   public List<StandingTeamModel> findTablePoints() {
-    return standingrepo.findAll();
+    return standingrepo.findAllWithTeam();
   }
   
   @PostMapping("/search")

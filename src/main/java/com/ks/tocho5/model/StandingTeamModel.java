@@ -1,7 +1,13 @@
 package com.ks.tocho5.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -158,4 +164,17 @@ public class StandingTeamModel{
 	private Integer points_for;
 	private Integer points_against;
 	private Integer table_points;
+
+	  // ====== RELACIÓN hacia TEAM (para obtener el nombre) ======
+	  @ManyToOne(fetch = FetchType.LAZY)
+	  @JoinColumn(name = "team_id", referencedColumnName = "team_id",
+	              insertable = false, updatable = false)
+	  @JsonIgnore // evita recursión/ciclos al serializar
+	  private EquiposModel team;
+
+	  // ====== Getter expuesto con el nombre del equipo ======
+	  @JsonProperty("team_name")
+	  public String getTeamName() {
+	    return (team != null) ? team.getName() : null;
+	  }
 }
