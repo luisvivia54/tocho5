@@ -59,6 +59,7 @@ public class GameService {
 		}
 		return "OK";
 	}
+	
 }
 
 //me quede en con el game id consigue el id de los dos equipos participantes y aumento sus partidos jugados,

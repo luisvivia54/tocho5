@@ -6,10 +6,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import com.ks.tocho5.model.EquiposStatsDTO;
 import com.ks.tocho5.model.GameModel;
+import com.ks.tocho5.model.GameStatusModel;
+import com.ks.tocho5.model.StandingTeamModel;
 import com.ks.tocho5.model.TeamStatsFilterDTO;
 import com.ks.tocho5.model.DatoValorDTO;
 import com.ks.tocho5.model.EquiposModel;
 import com.ks.tocho5.repository.EquiposRepository;
+import com.ks.tocho5.repository.JuegoStatus;
+import com.ks.tocho5.repository.StandingTeamRepository;
 import com.ks.tocho5.service.db.EquipoStatsService;
 import com.ks.tocho5.service.db.GameService;
 
@@ -20,17 +24,30 @@ public class Controller {
   private final EquiposRepository repository;
   private final EquipoStatsService service;
   private final GameService gameservice;
+  private final JuegoStatus juegostat;
+  private final StandingTeamRepository standingrepo;
 
-  public Controller(EquiposRepository repository, EquipoStatsService service, GameService gameservice) {
+  public Controller(EquiposRepository repository, EquipoStatsService service, GameService gameservice, JuegoStatus juegostat,StandingTeamRepository standingrepo) {
     this.repository = repository;
 	this.service = service;
 	this.gameservice = gameservice;
+	this.juegostat = juegostat;
+	this.standingrepo = standingrepo;
   }
 
   @GetMapping("/teams")
   public List<EquiposModel> findAll() {
     return repository.findAll();
   }
+  @GetMapping("/games")
+  public List<GameStatusModel> findAllGames() {
+    return juegostat.findAllScheduledWithTeams();
+  }
+  @GetMapping("/points")
+  public List<StandingTeamModel> findTablePoints() {
+    return standingrepo.findAll();
+  }
+  
   @PostMapping("/search")
   public ResponseEntity<Page<EquiposStatsDTO>> search(@RequestBody TeamStatsFilterDTO f) {
     return ResponseEntity.ok(service.search(f));

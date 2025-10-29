@@ -1,7 +1,10 @@
 package com.ks.tocho5.model;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -91,6 +94,27 @@ public class GameStatusModel{
 	private Integer home_team_id;
 	private Integer away_team_id;
 	private String status;
+	  // ===== Relaciones para leer nombres =====
+	  @ManyToOne(fetch = FetchType.LAZY)
+	  @JoinColumn(name = "home_team_id", referencedColumnName = "team_id",
+	              insertable = false, updatable = false)
+	  private EquiposModel homeTeam;
+
+	  @ManyToOne(fetch = FetchType.LAZY)
+	  @JoinColumn(name = "away_team_id", referencedColumnName = "team_id",
+	              insertable = false, updatable = false)
+	  private EquiposModel awayTeam;
+
+	  // ---- Getters “de nombre” (para JSON bonito) ----
+	  @com.fasterxml.jackson.annotation.JsonProperty("home_team")
+	  public String getHomeTeamName() {
+	    return homeTeam != null ? homeTeam.getName() : null;
+	  }
+
+	  @com.fasterxml.jackson.annotation.JsonProperty("away_team")
+	  public String getAwayTeamName() {
+	    return awayTeam != null ? awayTeam.getName() : null;
+	  }
 	
 	
 }
