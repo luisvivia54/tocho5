@@ -45,7 +45,7 @@ public class Controller {
   }
   @GetMapping("/gamesFinal")
   public List<GameStatusModel> findAllFinalGames() {
-	  List<GameStatusModel> ultimos5 = juegostat.findFinalWithTeams(PageRequest.of(0, 5));
+	  var ultimos5 = juegostat.findFinalWithTeams("FINAL", PageRequest.of(0, 5));
     return ultimos5;
   }
   @GetMapping("/points")
