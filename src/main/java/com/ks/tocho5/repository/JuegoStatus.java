@@ -3,6 +3,8 @@ package com.ks.tocho5.repository;
 
 import com.ks.tocho5.model.GameStatusModel;
 import java.util.List;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,16 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
           where g.status = 'SCHEDULED'
          """)
   List<GameStatusModel> findAllScheduledWithTeams();
+  
+  @Query("""
+		  select g
+		  from GameStatusModel g
+		  join fetch g.homeTeam
+		  join fetch g.awayTeam
+		  where g.status = 'FINAL'
+		  order by g.lastUpdate desc, g.id desc
+		""")
+		List<GameStatusModel> findFinalWithTeams(Pageable pageable);
 
   @Query("""
          select g

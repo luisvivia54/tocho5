@@ -1,6 +1,7 @@
 package com.ks.tocho5.controller;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -41,6 +42,11 @@ public class Controller {
   @GetMapping("/games")
   public List<GameStatusModel> findAllGames() {
     return juegostat.findAllScheduledWithTeams();
+  }
+  @GetMapping("/gamesFinal")
+  public List<GameStatusModel> findAllFinalGames() {
+	  List<GameStatusModel> ultimos5 = juegostat.findFinalWithTeams(PageRequest.of(0, 5));
+    return ultimos5;
   }
   @GetMapping("/points")
   public List<StandingTeamModel> findTablePoints() {
