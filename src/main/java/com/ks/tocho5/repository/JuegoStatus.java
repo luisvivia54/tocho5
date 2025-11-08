@@ -51,10 +51,9 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 		  join fetch g.homeTeam
 		  join fetch g.awayTeam
 		  where g.status = :status
-		  order by g.updated_at desc, g.id desc
+		  order by g.updated_at desc, g.game_id desc
 		""")
   List<GameStatusModel> findFinalWithTeams(@Param("status") String status, Pageable pageable);
-
 
   @Query("""
          select g

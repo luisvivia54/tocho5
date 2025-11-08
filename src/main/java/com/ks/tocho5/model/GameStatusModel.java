@@ -1,5 +1,8 @@
 package com.ks.tocho5.model;
 
+import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
@@ -89,6 +92,16 @@ public class GameStatusModel{
 		return "GameStatusModel [game_id=" + game_id + ", season_id=" + season_id + ", category_id=" + category_id
 				+ ", home_team_id=" + home_team_id + ", away_team_id=" + away_team_id + ", status=" + status + "]";
 	}
+  @Column(name = "updated_at")                    // opcional: Hibernate lo pone al hacer UPDATE
+  private LocalDateTime updated_at;
+
+  public LocalDateTime getUpdated_at() {
+    return updated_at;
+  }
+  public void setUpdated_at(LocalDateTime updated_at) {
+    this.updated_at = updated_at;
+  }
+
 	private Integer season_id;
 	private Integer category_id;
 	private Integer home_team_id;
