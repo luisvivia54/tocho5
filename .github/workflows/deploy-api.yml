@@ -25,6 +25,6 @@ jobs:
           caprover deploy
           --host ${{ http://45.56.73.176:3000 }}
           --password ${{ captain42 }}
-          --appName tocho-api
+          --appName tocho5-api
           --branch main
           
