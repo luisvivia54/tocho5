@@ -1,0 +1,30 @@
+
+name: Deploy API (CapRover)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+ # Build para fallar aquí si algo está mal
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - run: mvn -DskipTests package
+ # Despliegue a CapRover (construye usando tu Dockerfile y captain-definition)
+      - run: npm i -g caprover
+      - run: >
+          caprover deploy
+          --host ${{ secrets.CAPROVER_HOST }}
+          --password ${{ secrets.CAPROVER_PASSWORD }}
+          --appName tocho-api
+          --branch main
+          
