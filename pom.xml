@@ -102,6 +102,10 @@
   <!-- JPA + Postgres (ya deberías tener algo así) -->
 
 
+  <dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+  </dependency>
   
   </dependencies>
 
