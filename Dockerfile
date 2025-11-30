@@ -8,7 +8,7 @@ RUN mvn -B -q -DskipTests dependency:go-offline
 
 # Código y build
 COPY src ./src
-RUN mvn -B -DskipTests -Dmaven.resources.skip=true package
+RUN mvn -B -DskipTests package
 
 # ---- STAGE 2: runtime ----
 FROM eclipse-temurin:17-jre-alpine
