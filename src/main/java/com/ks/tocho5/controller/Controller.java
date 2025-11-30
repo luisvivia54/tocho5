@@ -1,8 +1,11 @@
 package com.ks.tocho5.controller;
 
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import com.ks.tocho5.model.EquiposStatsDTO;
@@ -10,10 +13,12 @@ import com.ks.tocho5.model.GameModel;
 import com.ks.tocho5.model.GameStatusModel;
 import com.ks.tocho5.model.StandingTeamModel;
 import com.ks.tocho5.model.TeamStatsFilterDTO;
+import com.ks.tocho5.model.AppUser;
 import com.ks.tocho5.model.EquiposModel;
 import com.ks.tocho5.repository.EquiposRepository;
 import com.ks.tocho5.repository.JuegoStatus;
 import com.ks.tocho5.repository.StandingTeamRepository;
+import com.ks.tocho5.service.db.AppUserService;
 import com.ks.tocho5.service.db.EquipoStatsService;
 import com.ks.tocho5.service.db.GameService;
 
@@ -26,13 +31,15 @@ public class Controller {
   private final GameService gameservice;
   private final JuegoStatus juegostat;
   private final StandingTeamRepository standingrepo;
+  private final AppUserService userservice;
 
-  public Controller(EquiposRepository repository, EquipoStatsService service, GameService gameservice, JuegoStatus juegostat,StandingTeamRepository standingrepo) {
+  public Controller(EquiposRepository repository, EquipoStatsService service,AppUserService userservice, GameService gameservice, JuegoStatus juegostat,StandingTeamRepository standingrepo) {
     this.repository = repository;
 	this.service = service;
 	this.gameservice = gameservice;
 	this.juegostat = juegostat;
 	this.standingrepo = standingrepo;
+	this.userservice = userservice;
   }
 
   @GetMapping("/teams")
@@ -56,6 +63,14 @@ public class Controller {
   @PostMapping("/search")
   public ResponseEntity<Page<EquiposStatsDTO>> search(@RequestBody TeamStatsFilterDTO f) {
     return ResponseEntity.ok(service.search(f));
+  }
+  @GetMapping("/me")
+  public String me(@AuthenticationPrincipal Jwt jwt) {
+      // Aquí se sincroniza (crea/actualiza) el usuario en Neon
+      AppUser user = userservice.getOrCreateFromJwt(jwt);
+
+      return "Hola " + (user.getFullName() != null ? user.getFullName() : user.getEmail())
+              + " (id interno=" + user.getId() + ")";
   }
   
   @PostMapping("/partido/update")
