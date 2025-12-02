@@ -22,6 +22,7 @@ public class SecurityConfig {
             // Qué endpoints son públicos y cuáles requieren auth
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
+                		"/api/**",
                     "/public/**",       // si quieres tener cosas abiertas
                     "/actuator/health" // si usas actuator
                 ).permitAll()
