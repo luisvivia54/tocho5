@@ -21,6 +21,40 @@ public class AppUser {
 
     @Column(name = "is_active", nullable = false)
     private Boolean active = true;
+    
+    @Column(name = "role", nullable = false)
+    private String role;   // "USER", "CAPTAIN", "ADMIN"
+
+    /**
+	 * @return the role
+	 */
+	public String getRole() {
+		return role;
+	}
+
+	/**
+	 * @param role the role to set
+	 */
+	public void setRole(String role) {
+		this.role = role;
+	}
+
+	/**
+	 * @return the maxTeamsAllowed
+	 */
+	public Integer getMaxTeamsAllowed() {
+		return maxTeamsAllowed;
+	}
+
+	/**
+	 * @param maxTeamsAllowed the maxTeamsAllowed to set
+	 */
+	public void setMaxTeamsAllowed(Integer maxTeamsAllowed) {
+		this.maxTeamsAllowed = maxTeamsAllowed;
+	}
+	
+	@Column(name = "max_teams_allowed", nullable = false)
+    private Integer maxTeamsAllowed;
 
     // Opcional: mapear timestamps (los maneja la BD, por eso insertable=false/updatable=false)
     @Column(name = "created_at", insertable = false, updatable = false)
@@ -47,4 +81,18 @@ public class AppUser {
 
     public java.time.OffsetDateTime getCreatedAt() { return createdAt; }
     public java.time.OffsetDateTime getUpdatedAt() { return updatedAt; }
+    
+
+    // ===== helpers =====
+    public boolean isAdmin() {
+        return "ADMIN".equalsIgnoreCase(role);
+    }
+
+    public boolean isCaptain() {
+        return "CAPTAIN".equalsIgnoreCase(role);
+    }
+
+    public boolean hasCaptainPrivileges() {
+        return isCaptain() || isAdmin();
+    }
 }

@@ -34,6 +34,10 @@ public class EquiposModel {
 
   @Column(name = "logo_url", length = 255)
   private String logoUrl;
+  
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "captain_id")
+  private AppUser captain;
 
   @Column(name = "is_active", nullable = false)
   private Boolean isActive = true; // mapea TINYINT(1) a boolean
@@ -52,8 +56,6 @@ public class EquiposModel {
   // Constructores
   // =========================
 
-  public EquiposModel() {
-  }
 
   public EquiposModel(
       Integer teamId,
@@ -65,7 +67,7 @@ public class EquiposModel {
       String logoUrl,
       Boolean isActive,
       LocalDateTime createdAt,
-      LocalDateTime updatedAt) {
+      LocalDateTime updatedAt, AppUser captain) {
     this.teamId = teamId;
     this.leagueId = leagueId;
     this.name = name;
@@ -76,6 +78,7 @@ public class EquiposModel {
     this.isActive = isActive;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
+    this.captain = captain;
   }
 
   // =========================
@@ -160,6 +163,17 @@ public class EquiposModel {
 
   public void setUpdatedAt(LocalDateTime updatedAt) {
     this.updatedAt = updatedAt;
+  }
+  
+  public AppUser getCaptain() {
+    return captain;
+  }
+
+  public void setCaptain(AppUser captain) {
+    this.captain = captain;
+  }
+  public EquiposModel() {
+      // constructor vacío requerido por JPA
   }
 
   // =========================

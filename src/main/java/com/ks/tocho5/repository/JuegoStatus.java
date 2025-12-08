@@ -4,6 +4,7 @@ package com.ks.tocho5.repository;
 import com.ks.tocho5.model.GameStatusModel;
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -63,4 +64,5 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
           where g.game_id = :id
          """)
   GameStatusModel findOneWithTeams(@Param("id") Integer gameId);
+
 }
