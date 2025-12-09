@@ -10,8 +10,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 
-import org.springframework.http.HttpMethod;
-
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -24,39 +22,13 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
 
-            // Reglas de autorización
+            // 🔓 TODAS LAS RUTAS PERMITIDAS, SIN TOKEN
             .authorizeHttpRequests(auth -> auth
-                // =======================
-                // ENDPOINTS PÚBLICOS (NO PIDEN TOKEN)
-                // =======================
+                .anyRequest().permitAll()
+            );
 
-                // GET simples
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/teams",      // lista de equipos
-                    "/api/games",
-                    "/api/gamesFinal",
-                    "/api/points"
-                ).permitAll()
-
-                // GET con path variable (detalle / jugadores)
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/teams/{teamId}/detail",
-                    "/api/teams/{teamId}/players"
-                ).permitAll()
-
-                // Opcional: permitir también OPTIONS para CORS (preflight)
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                // =======================
-                // TODO LO DEMÁS: REQUIERE BEARER
-                // =======================
-          
-            )
-
-            // Resource Server JWT (Keycloak)
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        // 👇 IMPORTANTE: para esta prueba, NO configuramos oauth2ResourceServer
+        // nada de .oauth2ResourceServer(...)
 
         return http.build();
     }
