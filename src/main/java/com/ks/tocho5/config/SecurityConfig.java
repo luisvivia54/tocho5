@@ -30,16 +30,20 @@ public class SecurityConfig {
                 // ENDPOINTS PÚBLICOS (NO PIDEN TOKEN)
                 // =======================
 
-                // Solo GET a estos paths es público:
+                // GET simples
                 .requestMatchers(
                     HttpMethod.GET,
-                    "/api/teams",          // lista de equipos (para home, etc.)
-                    "/api/games",          // partidos programados
-                    "/api/gamesFinal",     // últimos 5
-                    "/api/points",         // tabla de posiciones
-                    "/api/teams/*/detail",
-                    "/api/teams/*/detail",// detalle público de un equipo
-                    "/api/teams/*/players" // lista de jugadores de un equipo
+                    "/api/teams",      // lista de equipos
+                    "/api/games",
+                    "/api/gamesFinal",
+                    "/api/points"
+                ).permitAll()
+
+                // GET con path variable (detalle / jugadores)
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/teams/{teamId}/detail",
+                    "/api/teams/{teamId}/players"
                 ).permitAll()
 
                 // Opcional: permitir también OPTIONS para CORS (preflight)
