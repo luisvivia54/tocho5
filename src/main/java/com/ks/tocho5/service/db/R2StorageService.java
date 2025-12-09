@@ -42,6 +42,20 @@ public class R2StorageService {
         // URL pública que guardarás en Postgres
         return publicBaseUrl + "/" + key;
     }
+    public String uploadPlayerPhoto(Long teamId, MultipartFile file) throws IOException {
+        String extension = getExtension(file.getOriginalFilename());
+        String key = "teams/" + teamId + "/players/" + UUID.randomUUID() + extension;
+
+        PutObjectRequest putReq = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .contentType(file.getContentType())
+                .build();
+
+        r2Client.putObject(putReq, RequestBody.fromBytes(file.getBytes()));
+
+        return publicBaseUrl + "/" + key;
+    }
 
     private String getExtension(String filename) {
         if (filename == null) return "";

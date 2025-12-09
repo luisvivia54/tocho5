@@ -2,17 +2,25 @@ package com.ks.tocho5.controller;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
+
+import java.util.List;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+
 
 import com.ks.tocho5.model.EquiposStatsDTO;
 import com.ks.tocho5.model.GameModel;
 import com.ks.tocho5.model.GameStatusModel;
+import com.ks.tocho5.model.PlayerModel;
 import com.ks.tocho5.model.StandingTeamModel;
 import com.ks.tocho5.model.TeamStatsFilterDTO;
 import com.ks.tocho5.model.AppUser;
@@ -24,9 +32,9 @@ import com.ks.tocho5.service.db.AppUserService;
 import com.ks.tocho5.service.db.EquipoStatsService;
 import com.ks.tocho5.service.db.GameService;
 import com.ks.tocho5.service.db.TeamService;
+import com.ks.tocho5.service.db.PlayerService;
 
 import com.ks.tocho5.service.db.R2StorageService;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api")
@@ -40,6 +48,7 @@ public class Controller {
   private final AppUserService userservice;
   private final TeamService teamService;
   private final R2StorageService r2StorageService;
+  private final PlayerService playerService;
 
   public Controller(
       EquiposRepository repository,
@@ -49,7 +58,8 @@ public class Controller {
       JuegoStatus juegostat,
       StandingTeamRepository standingrepo,
       TeamService teamService,
-      R2StorageService r2StorageService
+      R2StorageService r2StorageService,
+      PlayerService playerService
   ) {
     this.repository = repository;
     this.service = service;
@@ -59,6 +69,7 @@ public class Controller {
     this.userservice = userservice;
     this.teamService = teamService;
     this.r2StorageService = r2StorageService;
+    this.playerService = playerService;
   }
 
   // ================= EQUIPOS / PARTIDOS / TABLA =================
@@ -202,5 +213,79 @@ public class Controller {
 
       // 6) Devolver datos al front
       return "logo ";
+  }// Lista jugadores de un equipo
+  @GetMapping("/teams/{teamId}/players")
+  public List<PlayerModel> getPlayersByTeam(@PathVariable Long teamId) {
+      return playerService.getPlayersByTeam(teamId);
   }
+
+  // Crear jugador
+  @PostMapping("/teams/{teamId}/players")
+  public PlayerModel createPlayerForTeam(
+          @AuthenticationPrincipal Jwt jwt,
+          @PathVariable Long teamId,
+          @RequestParam("fullName") String fullName,
+          @RequestParam("curp") String curp,
+          @RequestParam(value = "jerseyNumber", required = false) Integer jerseyNumber,
+          @RequestParam(value = "birthdate", required = false)
+          @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate birthdate,
+          @RequestParam("photo") MultipartFile photo
+  ) throws IOException {
+
+      return playerService.createPlayerForTeam(
+              jwt,
+              teamId,
+              fullName,
+              curp,
+              jerseyNumber,
+              birthdate,
+              photo
+      );
+  }
+
+  // Edita datos del jugador y opcionalmente la foto
+  @PutMapping("/teams/{teamId}/players/{playerId}")
+  public PlayerModel updatePlayer(
+       @AuthenticationPrincipal Jwt jwt,
+       @PathVariable Long teamId,   // 👈 ahora Long
+       @PathVariable Long playerId,
+       @RequestParam("fullName") String fullName,
+       @RequestParam("curp") String curp,
+       @RequestParam(value = "jerseyNumber", required = false) Integer jerseyNumber,
+       @RequestParam(value = "birthdate", required = false)
+       @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate birthdate,
+       @RequestParam(value = "photo", required = false) MultipartFile newPhoto
+  ) throws IOException {
+
+     return playerService.updatePlayer(
+           jwt,
+           teamId,
+           playerId,
+           fullName,
+           curp,
+           jerseyNumber,
+           birthdate,
+           newPhoto
+     );
+  }
+  
+  public record TeamDetailResponse(
+	        EquiposModel team,
+	        List<PlayerModel> players
+	) {}
+
+@GetMapping("/teams/{teamId}/detail")
+public TeamDetailResponse getTeamDetail(@PathVariable Long teamId) {
+    // 1) Equipo
+    EquiposModel team = repository.findById(teamId)
+            .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
+
+    // 2) Jugadores del equipo
+    List<PlayerModel> players = playerService.getPlayersByTeam(teamId);
+
+    // 3) Devolver todo junto
+    return new TeamDetailResponse(team, players);
+}
+
+
 }
