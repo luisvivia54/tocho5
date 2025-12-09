@@ -52,7 +52,7 @@ public class SecurityConfig {
                 // =======================
                 // TODO LO DEMÁS: REQUIERE BEARER
                 // =======================
-                .anyRequest().authenticated()
+          
             )
 
             // Resource Server JWT (Keycloak)
