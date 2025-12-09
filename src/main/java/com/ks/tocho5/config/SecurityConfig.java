@@ -21,11 +21,16 @@ public class SecurityConfig {
 
             // Qué endpoints son públicos y cuáles requieren auth
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                		"/api/**",
-                    "/public/**",       // si quieres tener cosas abiertas
-                    "/actuator/health" // si usas actuator
-                ).permitAll()
+            		.requestMatchers(
+                            "/api/teams",              // lista de equipos
+                            "/api/games",              // partidos
+                            "/api/gamesFinal",         // últimos 5
+                            "/api/points",             // tabla de posiciones
+
+                            // si ya agregaste estos:
+                            "/api/teams/*/detail",     // detalle público de equipo
+                            "/api/teams/*/players"     // jugadores de un equipo (solo lectura)
+                        ).permitAll()
                 .anyRequest().authenticated()
             )
 
