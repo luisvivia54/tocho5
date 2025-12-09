@@ -6,6 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
+import java.util.Optional;
+
+import com.ks.tocho5.model.TeamEnrollmentInfoProjection;
 
 import com.ks.tocho5.model.EquiposProjection;
 import com.ks.tocho5.model.EquiposStatsModel;
@@ -45,4 +48,24 @@ public interface EquiposFiltroRepository extends JpaRepository<EquiposStatsModel
 		      @Param("team_id") Integer team_id,
 		      Pageable pageable
 		  );
+
+    @Query(value = """
+        SELECT 
+          e.team_id        AS teamId,
+          e.season_id      AS seasonId,
+          s.name           AS seasonName,
+          e.category_id    AS categoryId,
+          c.name           AS categoryName
+        FROM team_enrollment e
+        JOIN season s   ON s.season_id   = e.season_id
+        JOIN category c ON c.category_id = e.category_id
+        WHERE e.team_id = :teamId
+        ORDER BY e.season_id DESC
+        LIMIT 1
+        """,
+        nativeQuery = true
+    )
+    Optional<TeamEnrollmentInfoProjection> findLatestEnrollmentForTeam(
+            @Param("teamId") Integer teamId
+    );
 }

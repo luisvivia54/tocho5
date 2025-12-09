@@ -37,7 +37,8 @@ public class SecurityConfig {
                     "/api/games",          // partidos programados
                     "/api/gamesFinal",     // últimos 5
                     "/api/points",         // tabla de posiciones
-                    "/api/teams/*/detail", // detalle público de un equipo
+                    "/api/teams/*/detail",
+                    "/api/teams/*/detail",// detalle público de un equipo
                     "/api/teams/*/players" // lista de jugadores de un equipo
                 ).permitAll()
 

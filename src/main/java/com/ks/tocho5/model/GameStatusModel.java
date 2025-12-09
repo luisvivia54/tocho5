@@ -107,6 +107,7 @@ public class GameStatusModel{
 	private Integer home_team_id;
 	private Integer away_team_id;
 	private String status;
+	private LocalDateTime match_date_utc;
 	  // ===== Relaciones para leer nombres =====
 	  @ManyToOne(fetch = FetchType.LAZY)
 	  @JoinColumn(name = "home_team_id", referencedColumnName = "team_id",
@@ -128,6 +129,12 @@ public class GameStatusModel{
 	  public String getAwayTeamName() {
 	    return awayTeam != null ? awayTeam.getName() : null;
 	  }
+	public LocalDateTime getMatch_date_utc() {
+		return match_date_utc;
+	}
+	public void setMatch_date_utc(LocalDateTime match_date_utc) {
+		this.match_date_utc = match_date_utc;
+	}
 	
 	
 }

@@ -33,8 +33,10 @@ import com.ks.tocho5.service.db.EquipoStatsService;
 import com.ks.tocho5.service.db.GameService;
 import com.ks.tocho5.service.db.TeamService;
 import com.ks.tocho5.service.db.PlayerService;
+import com.ks.tocho5.model.TeamDetailDTOs.TeamDetailDTO;
 
 import com.ks.tocho5.service.db.R2StorageService;
+import com.ks.tocho5.service.db.TeamDetailService;
 
 @RestController
 @RequestMapping("/api")
@@ -49,6 +51,8 @@ public class Controller {
   private final TeamService teamService;
   private final R2StorageService r2StorageService;
   private final PlayerService playerService;
+  private final TeamDetailService teamDetailService;
+
 
   public Controller(
       EquiposRepository repository,
@@ -59,7 +63,8 @@ public class Controller {
       StandingTeamRepository standingrepo,
       TeamService teamService,
       R2StorageService r2StorageService,
-      PlayerService playerService
+      PlayerService playerService,
+      TeamDetailService teamDetailService
   ) {
     this.repository = repository;
     this.service = service;
@@ -70,6 +75,7 @@ public class Controller {
     this.teamService = teamService;
     this.r2StorageService = r2StorageService;
     this.playerService = playerService;
+    this.teamDetailService = teamDetailService;
   }
 
   // ================= EQUIPOS / PARTIDOS / TABLA =================
@@ -275,16 +281,8 @@ public class Controller {
 	) {}
 
 @GetMapping("/teams/{teamId}/detail")
-public TeamDetailResponse getTeamDetail(@PathVariable Long teamId) {
-    // 1) Equipo
-    EquiposModel team = repository.findById(teamId)
-            .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
-
-    // 2) Jugadores del equipo
-    List<PlayerModel> players = playerService.getPlayersByTeam(teamId);
-
-    // 3) Devolver todo junto
-    return new TeamDetailResponse(team, players);
+public TeamDetailDTO getTeamDetail(@PathVariable Long teamId) {
+    return teamDetailService.getTeamDetail(teamId);
 }
 
 
