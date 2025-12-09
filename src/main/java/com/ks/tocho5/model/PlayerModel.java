@@ -30,7 +30,7 @@ public class PlayerModel {
     @Column(name = "jersey_number")
     private Integer jerseyNumber;
 
-    @Column(name = "birthdate")
+    @Column(name = "birth_date")
     private LocalDate birthdate;
 
     @Column(name = "created_at", insertable = false, updatable = false)
