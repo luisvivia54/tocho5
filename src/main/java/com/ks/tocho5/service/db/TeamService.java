@@ -1,10 +1,11 @@
-// src/main/java/com/ks/tocho5/service/TeamService.java
 package com.ks.tocho5.service.db;
 
+import com.ks.tocho5.controller.Controller.CreateTeamRequest;
 import com.ks.tocho5.model.AppUser;
 import com.ks.tocho5.model.EquiposModel;
+import com.ks.tocho5.model.EquiposStatsModel;
 import com.ks.tocho5.repository.EquiposRepository;
-import com.ks.tocho5.service.db.AppUserService;
+import com.ks.tocho5.repository.EquiposFiltroRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,58 +14,61 @@ import org.springframework.transaction.annotation.Transactional;
 public class TeamService {
 
     private final AppUserService appUserService;
-    private final EquiposRepository teamRepository;
+    private final EquiposRepository equiposRepository;
+    private final EquiposFiltroRepository equiposFiltroRepository;
 
     public TeamService(AppUserService appUserService,
-    		EquiposRepository teamRepository) {
+                       EquiposRepository equiposRepository,
+                       EquiposFiltroRepository equiposFiltroRepository) {
         this.appUserService = appUserService;
-        this.teamRepository = teamRepository;
+        this.equiposRepository = equiposRepository;
+        this.equiposFiltroRepository = equiposFiltroRepository;
     }
 
-    /**
-     * A partir del JWT:
-     * - sincroniza/crea el AppUser en BD
-     * - devuelve el AppUser actual
-     */
     private AppUser getCurrentUser(Jwt jwt) {
         return appUserService.syncFromJwt(jwt);
     }
 
+    // opcional: versión vieja para compatibilidad
     @Transactional
-    public EquiposModel createTeamForCurrentUser(Jwt jwt, String teamName) {
+    public EquiposModel createTeamForCurrentUser(Jwt jwt, String name) {
+        CreateTeamRequest req = new CreateTeamRequest(name, null, null, null);
+        return createTeamForCurrentUser(jwt, req);
+    }
+
+    @Transactional
+    public EquiposModel createTeamForCurrentUser(Jwt jwt, CreateTeamRequest req) {
         AppUser user = getCurrentUser(jwt);
 
         if (!user.hasCaptainPrivileges()) {
             throw new RuntimeException("Solo capitanes o admins pueden crear equipos");
         }
 
-        int currentTeams = teamRepository.countByCaptain(user);
-
+        int currentTeams = equiposRepository.countByCaptain(user);
         if (currentTeams >= user.getMaxTeamsAllowed()) {
             throw new RuntimeException("Ya alcanzaste tu límite de equipos (" + user.getMaxTeamsAllowed() + ")");
         }
 
+        // 1) Crear equipo
         EquiposModel team = new EquiposModel();
-        team.setName(teamName);
-        team.setCaptain(user);  // esto llena captain_id en la tabla team
+        team.setName(req.name());
+        team.setCaptain(user);
 
-        return teamRepository.save(team);
-    }
-
-    @Transactional
-    public EquiposModel updateTeamName(Jwt jwt, Long teamId, String newName) {
-        AppUser user = getCurrentUser(jwt);
-
-        EquiposModel team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
-
-        // Solo capitán del equipo o admin puede editarlo
-        if (!user.isAdmin() && (team.getCaptain() == null ||
-                !team.getCaptain().getId().equals(user.getId()))) {
-            throw new RuntimeException("No puedes editar un equipo que no es tuyo");
+        if (req.leagueId() != null) {
+            team.setLeagueId(req.leagueId()); // si tienes este campo
         }
 
-        team.setName(newName);
-        return teamRepository.save(team);
+        team = equiposRepository.save(team);
+
+        // 2) Crear inscripción en team_enrollment
+        if (req.seasonId() != null && req.categoryId() != null) {
+            EquiposStatsModel enrollment = new EquiposStatsModel();
+            enrollment.setTeam_id(team.getTeamId());
+            enrollment.setSeason_id(req.seasonId());
+            enrollment.setCategory_id(req.categoryId());
+            equiposFiltroRepository.save(enrollment);
+        }
+
+        return team;
     }
 }
