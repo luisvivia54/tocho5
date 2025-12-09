@@ -1,9 +1,12 @@
+// src/main/java/com/ks/tocho5/model/AppUser.java
 package com.ks.tocho5.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "app_user")
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class AppUser {
 
     @Id
@@ -21,49 +24,21 @@ public class AppUser {
 
     @Column(name = "is_active", nullable = false)
     private Boolean active = true;
-    
+
     @Column(name = "role", nullable = false)
     private String role;   // "USER", "CAPTAIN", "ADMIN"
 
-    /**
-	 * @return the role
-	 */
-	public String getRole() {
-		return role;
-	}
-
-	/**
-	 * @param role the role to set
-	 */
-	public void setRole(String role) {
-		this.role = role;
-	}
-
-	/**
-	 * @return the maxTeamsAllowed
-	 */
-	public Integer getMaxTeamsAllowed() {
-		return maxTeamsAllowed;
-	}
-
-	/**
-	 * @param maxTeamsAllowed the maxTeamsAllowed to set
-	 */
-	public void setMaxTeamsAllowed(Integer maxTeamsAllowed) {
-		this.maxTeamsAllowed = maxTeamsAllowed;
-	}
-	
-	@Column(name = "max_teams_allowed", nullable = false)
+    @Column(name = "max_teams_allowed", nullable = false)
     private Integer maxTeamsAllowed;
 
-    // Opcional: mapear timestamps (los maneja la BD, por eso insertable=false/updatable=false)
+    // timestamps manejados por la BD
     @Column(name = "created_at", insertable = false, updatable = false)
     private java.time.OffsetDateTime createdAt;
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private java.time.OffsetDateTime updatedAt;
 
-    // getters y setters...
+    // ===== getters & setters =====
 
     public Long getId() { return id; }
 
@@ -79,9 +54,14 @@ public class AppUser {
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
 
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public Integer getMaxTeamsAllowed() { return maxTeamsAllowed; }
+    public void setMaxTeamsAllowed(Integer maxTeamsAllowed) { this.maxTeamsAllowed = maxTeamsAllowed; }
+
     public java.time.OffsetDateTime getCreatedAt() { return createdAt; }
     public java.time.OffsetDateTime getUpdatedAt() { return updatedAt; }
-    
 
     // ===== helpers =====
     public boolean isAdmin() {
