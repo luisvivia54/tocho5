@@ -10,6 +10,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 
+import org.springframework.http.HttpMethod;
+
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -22,13 +24,39 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
 
-            // 🔓 TODAS LAS RUTAS PERMITIDAS, SIN TOKEN
+            // Reglas de autorización
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll()
-            );
+                // =======================
+                // ENDPOINTS PÚBLICOS (NO PIDEN TOKEN)
+                // =======================
 
-        // 👇 IMPORTANTE: para esta prueba, NO configuramos oauth2ResourceServer
-        // nada de .oauth2ResourceServer(...)
+                // GET simples
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/teams",      // lista de equipos
+                    "/api/games",
+                    "/api/gamesFinal",
+                    "/api/points"
+                ).permitAll()
+
+                // GET con path variable (detalle / jugadores)
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/teams/{teamId}/detail",
+                    "/api/teams/{teamId}/players"
+                ).permitAll()
+
+                // Opcional: permitir también OPTIONS para CORS (preflight)
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // =======================
+                // TODO LO DEMÁS: REQUIERE BEARER
+                // =======================
+                .anyRequest().authenticated()
+            )
+
+            // Resource Server JWT (Keycloak)
+            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();
     }
