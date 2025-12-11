@@ -4,6 +4,8 @@ package com.ks.tocho5.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 
 @Entity
 @Table(name = "player")
@@ -15,6 +17,7 @@ public class PlayerModel {
     private Long playerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
     @JoinColumn(name = "team_id", nullable = false)
     private EquiposModel team;
 
