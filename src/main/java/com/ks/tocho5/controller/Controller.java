@@ -206,6 +206,13 @@ public class Controller {
     ) {
         return teamService.updateTeamForCurrentUser(jwt, teamId, request);
     }
+    
+    @GetMapping("/teams/{teamId}")
+    public ResponseEntity<EquiposModel> getTeamById(@PathVariable Long teamId) {
+        return repository.findById(teamId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
     // ================= LOGO DEL EQUIPO =================
 
