@@ -137,6 +137,12 @@ public class Controller {
             Integer leagueId
     ) {}
 
+    // DTO para actualizar equipo (nombre + shortName)
+    public record UpdateTeamRequest(
+            String name,
+            String shortName
+    ) {}
+
     // DTO para que el front pueda decidir qué botón mostrar
     public record MyTeamSummary(
             Long userId,
@@ -186,6 +192,19 @@ public class Controller {
             @RequestBody CreateTeamRequest request
     ) {
         return teamService.createTeamForCurrentUser(jwt, request);
+    }
+
+    /**
+     * PUT /api/teams/{teamId}
+     * Actualiza nombre y shortName de un equipo del usuario actual.
+     */
+    @PutMapping("/teams/{teamId}")
+    public EquiposModel updateMyTeam(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long teamId,
+            @RequestBody UpdateTeamRequest request
+    ) {
+        return teamService.updateTeamForCurrentUser(jwt, teamId, request);
     }
 
     // ================= LOGO DEL EQUIPO =================
@@ -270,6 +289,16 @@ public class Controller {
                 birthdate,
                 newPhoto
         );
+    }
+
+    @DeleteMapping("/teams/{teamId}/players/{playerId}")
+    public ResponseEntity<Void> deletePlayer(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long teamId,
+            @PathVariable Long playerId
+    ) {
+        playerService.deletePlayer(jwt, teamId, playerId);
+        return ResponseEntity.noContent().build();
     }
 
     // =============== DETALLE PÚBLICO DE EQUIPO =================

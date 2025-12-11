@@ -1,6 +1,7 @@
 package com.ks.tocho5.service.db;
 
 import com.ks.tocho5.controller.Controller.CreateTeamRequest;
+import com.ks.tocho5.controller.Controller.UpdateTeamRequest;
 import com.ks.tocho5.model.AppUser;
 import com.ks.tocho5.model.EquiposModel;
 import com.ks.tocho5.model.EquiposStatsModel;
@@ -70,5 +71,36 @@ public class TeamService {
         }
 
         return team;
+    }
+
+    /**
+     * Actualizar nombre y shortName de un equipo del usuario actual.
+     */
+    @Transactional
+    public EquiposModel updateTeamForCurrentUser(Jwt jwt, Long teamId, UpdateTeamRequest req) {
+        AppUser user = getCurrentUser(jwt);
+
+        EquiposModel team = equiposRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
+
+        // Solo admin o capitán de ese equipo
+        if (!user.isAdmin() &&
+            (team.getCaptain() == null || !team.getCaptain().getId().equals(user.getId()))) {
+            throw new RuntimeException("No puedes editar un equipo que no es tuyo");
+        }
+
+        if (req.name() == null || req.name().isBlank()) {
+            throw new IllegalArgumentException("El nombre del equipo es obligatorio");
+        }
+
+        team.setName(req.name().trim());
+
+        if (req.shortName() != null && !req.shortName().isBlank()) {
+            team.setShortName(req.shortName().trim());
+        } else {
+            team.setShortName(null);
+        }
+
+        return equiposRepository.save(team);
     }
 }

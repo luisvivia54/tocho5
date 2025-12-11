@@ -1,4 +1,3 @@
-// src/main/java/com/ks/tocho5/service/db/PlayerService.java
 package com.ks.tocho5.service.db;
 
 import java.io.IOException;
@@ -148,5 +147,38 @@ public class PlayerService {
         }
 
         return playerRepository.save(player);
+    }
+
+    // Eliminar jugador
+    @Transactional
+    public void deletePlayer(
+            Jwt jwt,
+            Long teamId,
+            Long playerId
+    ) {
+        AppUser user = appUserService.syncFromJwt(jwt);
+
+        EquiposModel team = equiposRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
+
+        assertCanManageTeam(user, team);
+
+        PlayerModel player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new RuntimeException("Jugador no encontrado"));
+
+        Long playerTeamId = player.getTeam().getTeamId() == null
+                ? null
+                : Long.valueOf(player.getTeam().getTeamId());
+
+        if (playerTeamId == null || !playerTeamId.equals(teamId)) {
+            throw new RuntimeException("El jugador no pertenece a este equipo");
+        }
+
+        // Opcional: borrar también la foto en R2 si quieres
+        // if (player.getPhotoUrl() != null) {
+        //     r2StorageService.deleteObject(player.getPhotoUrl());
+        // }
+
+        playerRepository.delete(player);
     }
 }
