@@ -22,6 +22,7 @@ import com.ks.tocho5.model.TeamStatsFilterDTO;
 import com.ks.tocho5.model.AppUser;
 import com.ks.tocho5.model.EquiposModel;
 import com.ks.tocho5.model.TeamDetailDTOs.TeamDetailDTO;
+import com.ks.tocho5.model.TeamPhotoModel;
 
 import com.ks.tocho5.repository.EquiposRepository;
 import com.ks.tocho5.repository.JuegoStatus;
@@ -34,6 +35,7 @@ import com.ks.tocho5.service.db.TeamService;
 import com.ks.tocho5.service.db.PlayerService;
 import com.ks.tocho5.service.db.R2StorageService;
 import com.ks.tocho5.service.db.TeamDetailService;
+import com.ks.tocho5.service.db.TeamCarouselService;
 
 @RestController
 @RequestMapping("/api")
@@ -49,6 +51,7 @@ public class Controller {
     private final R2StorageService r2StorageService;
     private final PlayerService playerService;
     private final TeamDetailService teamDetailService;
+    private final TeamCarouselService teamCarouselService;
 
     public Controller(
             EquiposRepository repository,
@@ -60,7 +63,8 @@ public class Controller {
             TeamService teamService,
             R2StorageService r2StorageService,
             PlayerService playerService,
-            TeamDetailService teamDetailService
+            TeamDetailService teamDetailService,
+            TeamCarouselService teamCarouselService
     ) {
         this.repository = repository;
         this.service = service;
@@ -72,6 +76,7 @@ public class Controller {
         this.r2StorageService = r2StorageService;
         this.playerService = playerService;
         this.teamDetailService = teamDetailService;
+        this.teamCarouselService = teamCarouselService;
     }
 
     // ================= EQUIPOS / PARTIDOS / TABLA =================
@@ -156,11 +161,6 @@ public class Controller {
 
     /**
      * GET /api/teams/mine
-     * Devuelve el estado del usuario respecto a equipos:
-     * - rol (USER/CAPTAIN/ADMIN)
-     * - cuántos equipos tiene
-     * - si puede crear otro
-     * - lista de equipos donde él es capitán
      */
     @GetMapping("/teams/mine")
     public MyTeamSummary getMyTeam(@AuthenticationPrincipal Jwt jwt) {
@@ -184,7 +184,6 @@ public class Controller {
 
     /**
      * POST /api/teams/mine
-     * Crea un equipo para el usuario actual (si es capitán/admin y no se pasa de su límite).
      */
     @PostMapping("/teams/mine")
     public EquiposModel createMyTeam(
@@ -196,7 +195,6 @@ public class Controller {
 
     /**
      * PUT /api/teams/{teamId}
-     * Actualiza nombre y shortName de un equipo del usuario actual.
      */
     @PutMapping("/teams/{teamId}")
     public EquiposModel updateMyTeam(
@@ -206,7 +204,7 @@ public class Controller {
     ) {
         return teamService.updateTeamForCurrentUser(jwt, teamId, request);
     }
-    
+
     @GetMapping("/teams/{teamId}")
     public ResponseEntity<EquiposModel> getTeamById(@PathVariable Long teamId) {
         return repository.findById(teamId)
@@ -305,6 +303,47 @@ public class Controller {
             @PathVariable Long playerId
     ) {
         playerService.deletePlayer(jwt, teamId, playerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // =============== CARRUSEL DE FOTOS DEL EQUIPO =================
+
+    @GetMapping("/teams/{teamId}/photos")
+    public List<TeamPhotoModel> listTeamPhotos(@PathVariable Long teamId) {
+        return teamCarouselService.listPhotos(teamId);
+    }
+
+    @PostMapping("/teams/{teamId}/photos")
+    public TeamPhotoModel addTeamPhoto(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long teamId,
+            @RequestParam("photo") MultipartFile photo,
+            @RequestParam(value = "positionIndex", required = false) Integer positionIndex
+    ) throws IOException {
+
+        return teamCarouselService.addPhoto(jwt, teamId, photo, positionIndex);
+    }
+
+    @PutMapping("/teams/{teamId}/photos/{photoId}")
+    public TeamPhotoModel updateTeamPhoto(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long teamId,
+            @PathVariable Long photoId,
+            @RequestParam("photo") MultipartFile photo,
+            @RequestParam(value = "positionIndex", required = false) Integer positionIndex
+    ) throws IOException {
+
+        return teamCarouselService.updatePhoto(jwt, teamId, photoId, photo, positionIndex);
+    }
+
+    @DeleteMapping("/teams/{teamId}/photos/{photoId}")
+    public ResponseEntity<Void> deleteTeamPhoto(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long teamId,
+            @PathVariable Long photoId
+    ) throws IOException {
+
+        teamCarouselService.deletePhoto(jwt, teamId, photoId);
         return ResponseEntity.noContent().build();
     }
 
