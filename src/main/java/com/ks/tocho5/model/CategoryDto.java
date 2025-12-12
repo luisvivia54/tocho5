@@ -1,4 +1,4 @@
-package com.ks.tocho5.controller.dto;
+package com.ks.tocho5.model;
 
 public class CategoryDto {
 
