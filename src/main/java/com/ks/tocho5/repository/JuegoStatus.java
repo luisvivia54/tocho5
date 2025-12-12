@@ -5,7 +5,6 @@ import com.ks.tocho5.model.GameStatusModel;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -28,6 +27,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   // === Queries existentes por IDs (si las quieres conservar) ===
   @Query("select g.home_team_id from GameStatusModel g where g.game_id = :id")
   Integer findHomeTeamId(@Param("id") Integer gameId);
+
   @Query("select g.away_team_id from GameStatusModel g where g.game_id = :id")
   Integer findAwayTeamId(@Param("id") Integer gameId);
 
@@ -46,15 +46,15 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
           where g.status = 'SCHEDULED'
          """)
   List<GameStatusModel> findAllScheduledWithTeams();
-  
+
   @Query("""
-		  select g
-		  from GameStatusModel g
-		  join fetch g.homeTeam
-		  join fetch g.awayTeam
-		  where g.status = :status
-		  order by g.updated_at desc, g.game_id desc
-		""")
+         select g
+           from GameStatusModel g
+           join fetch g.homeTeam
+           join fetch g.awayTeam
+          where g.status = :status
+          order by g.updated_at desc, g.game_id desc
+         """)
   List<GameStatusModel> findFinalWithTeams(@Param("status") String status, Pageable pageable);
 
   @Query("""
@@ -65,15 +65,35 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
           where g.game_id = :id
          """)
   GameStatusModel findOneWithTeams(@Param("id") Integer gameId);
-  @Query("""
-	        select g
-	        from GameStatusModel g
-	        where (g.home_team_id = :teamId or g.away_team_id = :teamId)
-	        order by g.match_date_utc desc
-	    """)
-	    List<GameStatusModel> findLastGamesForTeam(
-	            @Param("teamId") Integer teamId,
-	            Pageable pageable
-	    );
 
+  @Query("""
+         select g
+           from GameStatusModel g
+          where (g.home_team_id = :teamId or g.away_team_id = :teamId)
+          order by g.match_date_utc desc
+         """)
+  List<GameStatusModel> findLastGamesForTeam(
+          @Param("teamId") Integer teamId,
+          Pageable pageable
+  );
+
+  // === NUEVO: partidos filtrados por leagueId + categoryCode + gender ===
+  @Query("""
+         select g
+           from GameStatusModel g
+           join fetch g.homeTeam
+           join fetch g.awayTeam,
+                CategoryModel c
+          where c.id = g.category_id
+            and g.status = 'SCHEDULED'
+            and (:leagueId    is null or g.league_id  = :leagueId)
+            and (:categoryCode is null or upper(c.code)   = upper(:categoryCode))
+            and (:gender      is null or upper(c.gender) = upper(:gender))
+          order by g.match_date_utc asc
+         """)
+  List<GameStatusModel> findScheduledWithTeamsFiltered(
+          @Param("leagueId") Integer leagueId,
+          @Param("categoryCode") String categoryCode,
+          @Param("gender") String gender
+  );
 }

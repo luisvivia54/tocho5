@@ -54,9 +54,9 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
   @Transactional default int addPointsAgainst(Integer teamId, Integer p){ return incrementPointsAgainst(teamId, p); }
   @Transactional default int addTablePoints(Integer teamId, Integer p){ return incrementTablePoints(teamId, p); }
 
-  // -------- NUEVOS: traer standings + nombre del team en una sola consulta --------
+  // -------- EXISTENTES: traer standings + nombre del team en una sola consulta --------
 
-  // Todos
+  // Todos (sin filtro)
   @Query("""
          select s
            from StandingTeamModel s
@@ -64,7 +64,7 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
          """)
   List<StandingTeamModel> findAllWithTeam();
 
-  // Filtrado típico (ej. por temporada/categoría)
+  // Filtrado típico por temporada/categoría (si lo sigues usando)
   @Query("""
          select s
            from StandingTeamModel s
@@ -74,5 +74,22 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
          """)
   List<StandingTeamModel> findBySeasonAndCategoryWithTeam(@Param("seasonId") Integer seasonId,
                                                           @Param("categoryId") Integer categoryId);
-}
 
+  // -------- NUEVO: filtrado por leagueId + categoryCode + gender (rama) --------
+  @Query("""
+         select s
+           from StandingTeamModel s
+           join fetch s.team,
+                CategoryModel c
+          where c.id = s.category_id
+            and (:leagueId    is null or s.league_id  = :leagueId)
+            and (:categoryCode is null or upper(c.code)   = upper(:categoryCode))
+            and (:gender      is null or upper(c.gender) = upper(:gender))
+          order by s.table_points desc
+         """)
+  List<StandingTeamModel> findAllWithTeamFiltered(
+          @Param("leagueId") Integer leagueId,
+          @Param("categoryCode") String categoryCode,
+          @Param("gender") String gender
+  );
+}

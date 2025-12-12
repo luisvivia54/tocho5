@@ -1,3 +1,4 @@
+// src/main/java/com/ks/tocho5/service/db/TeamService.java
 package com.ks.tocho5.service.db;
 
 import com.ks.tocho5.controller.Controller.CreateTeamRequest;
@@ -10,6 +11,8 @@ import com.ks.tocho5.repository.EquiposFiltroRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class TeamService {
@@ -56,12 +59,13 @@ public class TeamService {
         team.setCaptain(user);
 
         if (req.leagueId() != null) {
-            team.setLeagueId(req.leagueId()); // si tienes este campo
+            // Asegúrate de que EquiposModel tenga este campo
+            team.setLeagueId(req.leagueId());
         }
 
         team = equiposRepository.save(team);
 
-        // 2) Crear inscripción en team_enrollment
+        // 2) Crear inscripción en team_enrollment / equipos_stats
         if (req.seasonId() != null && req.categoryId() != null) {
             EquiposStatsModel enrollment = new EquiposStatsModel();
             enrollment.setTeam_id(team.getTeamId());
@@ -102,5 +106,24 @@ public class TeamService {
         }
 
         return equiposRepository.save(team);
+    }
+
+    /**
+     * NUEVO:
+     * Buscar equipos filtrando por leagueId, categoryCode y gender (rama).
+     *
+     * Por ahora esta implementación solo devuelve todos los equipos
+     * para no romper nada. Luego podemos meter aquí un query real usando
+     * EquiposFiltroRepository o EquiposRepository con joins a category.
+     */
+    @Transactional(readOnly = true)
+    public List<EquiposModel> findTeamsFiltered(
+            Integer leagueId,
+            String categoryCode,
+            String gender
+    ) {
+        // TODO: implementar filtro real (leagueId/categoryCode/gender) con tus tablas
+        // por ahora se regresa todo para mantener el comportamiento actual
+        return equiposRepository.findAll();
     }
 }

@@ -36,6 +36,8 @@ import com.ks.tocho5.service.db.PlayerService;
 import com.ks.tocho5.service.db.R2StorageService;
 import com.ks.tocho5.service.db.TeamDetailService;
 import com.ks.tocho5.service.db.TeamCarouselService;
+import com.ks.tocho5.service.db.CategoryService;
+import com.ks.tocho5.model.CategoryDto;
 
 @RestController
 @RequestMapping("/api")
@@ -52,6 +54,7 @@ public class Controller {
     private final PlayerService playerService;
     private final TeamDetailService teamDetailService;
     private final TeamCarouselService teamCarouselService;
+    private final CategoryService categoryService; // NUEVO
 
     public Controller(
             EquiposRepository repository,
@@ -64,7 +67,8 @@ public class Controller {
             R2StorageService r2StorageService,
             PlayerService playerService,
             TeamDetailService teamDetailService,
-            TeamCarouselService teamCarouselService
+            TeamCarouselService teamCarouselService,
+            CategoryService categoryService // NUEVO
     ) {
         this.repository = repository;
         this.service = service;
@@ -77,18 +81,53 @@ public class Controller {
         this.playerService = playerService;
         this.teamDetailService = teamDetailService;
         this.teamCarouselService = teamCarouselService;
+        this.categoryService = categoryService;
     }
 
     // ================= EQUIPOS / PARTIDOS / TABLA =================
 
+    /**
+     * GET /api/teams
+     * - Sin parámetros -> todos los equipos (comportamiento viejo).
+     * - Con leagueId / categoryCode / gender -> filtrado.
+     */
     @GetMapping("/teams")
-    public List<EquiposModel> findAll() {
-        return repository.findAll();
+    public List<EquiposModel> findAllTeams(
+            @RequestParam(name = "leagueId", required = false) Integer leagueId,
+            @RequestParam(name = "categoryCode", required = false) String categoryCode,
+            @RequestParam(name = "gender", required = false) String gender
+    ) {
+        String code = normalizeFilterParam(categoryCode);
+        String gen = normalizeFilterParam(gender);
+
+        // Sin filtros: regresamos todo como antes
+        if (leagueId == null && code == null && gen == null) {
+            return repository.findAll();
+        }
+
+        // Filtros: delegamos a TeamService (ahí puedes usar Category + joins)
+        return teamService.findTeamsFiltered(leagueId, code, gen);
     }
 
+    /**
+     * GET /api/games
+     * - Sin filtros -> todos los partidos programados (viejo comportamiento).
+     * - Con leagueId / categoryCode / gender -> filtrados.
+     */
     @GetMapping("/games")
-    public List<GameStatusModel> findAllGames() {
-        return juegostat.findAllScheduledWithTeams();
+    public List<GameStatusModel> findAllGames(
+            @RequestParam(name = "leagueId", required = false) Integer leagueId,
+            @RequestParam(name = "categoryCode", required = false) String categoryCode,
+            @RequestParam(name = "gender", required = false) String gender
+    ) {
+        String code = normalizeFilterParam(categoryCode);
+        String gen = normalizeFilterParam(gender);
+
+        if (leagueId == null && code == null && gen == null) {
+            return juegostat.findAllScheduledWithTeams();
+        }
+
+        return juegostat.findScheduledWithTeamsFiltered(leagueId, code, gen);
     }
 
     @GetMapping("/gamesFinal")
@@ -97,9 +136,25 @@ public class Controller {
         return ultimos5;
     }
 
+    /**
+     * GET /api/points
+     * - Sin filtros -> tabla completa (findAllWithTeam()).
+     * - Con leagueId / categoryCode / gender -> filtrada.
+     */
     @GetMapping("/points")
-    public List<StandingTeamModel> findTablePoints() {
-        return standingrepo.findAllWithTeam();
+    public List<StandingTeamModel> findTablePoints(
+            @RequestParam(name = "leagueId", required = false) Integer leagueId,
+            @RequestParam(name = "categoryCode", required = false) String categoryCode,
+            @RequestParam(name = "gender", required = false) String gender
+    ) {
+        String code = normalizeFilterParam(categoryCode);
+        String gen = normalizeFilterParam(gender);
+
+        if (leagueId == null && code == null && gen == null) {
+            return standingrepo.findAllWithTeam();
+        }
+
+        return standingrepo.findAllWithTeamFiltered(leagueId, code, gen);
     }
 
     @PostMapping("/search")
@@ -352,5 +407,31 @@ public class Controller {
     @GetMapping("/teams/{teamId}/detail")
     public TeamDetailDTO getTeamDetail(@PathVariable Long teamId) {
         return teamDetailService.getTeamDetail(teamId);
+    }
+
+    // =============== CATEGORÍAS (para filtros del front) =================
+
+    @GetMapping("/categories")
+    public List<CategoryDto> listCategories(
+            @RequestParam(name = "leagueId", required = false) Long leagueId,
+            @RequestParam(name = "gender", required = false) String gender
+    ) {
+        return categoryService.getCategories(leagueId, gender);
+    }
+
+    // =============== HELPERS PRIVADOS =================
+
+    /**
+     * Normaliza parámetros de filtro:
+     * - null, "", "   ", "all" -> null
+     * - cualquier otro valor se regresa tal cual (el repo se encarga de UPPER/LOWER)
+     */
+    private String normalizeFilterParam(String value) {
+        if (value == null) return null;
+        String v = value.trim();
+        if (v.isEmpty() || "all".equalsIgnoreCase(v)) {
+            return null;
+        }
+        return v;
     }
 }
