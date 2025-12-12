@@ -1,4 +1,3 @@
-// src/main/java/com/ks/tocho5/repository/StandingTeamRepository.java
 package com.ks.tocho5.repository;
 
 import com.ks.tocho5.model.StandingTeamModel;
@@ -82,9 +81,9 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
            join fetch s.team,
                 CategoryModel c
           where c.id = s.category_id
-            and (:leagueId    is null or s.league_id  = :leagueId)
-            and (:categoryCode is null or upper(c.code)   = upper(:categoryCode))
-            and (:gender      is null or upper(c.gender) = upper(:gender))
+            and (:leagueId     is null or c.league_id      = :leagueId)
+            and (:categoryCode is null or upper(c.code)    = upper(:categoryCode))
+            and (:gender       is null or upper(c.gender)  = upper(:gender))
           order by s.table_points desc
          """)
   List<StandingTeamModel> findAllWithTeamFiltered(
