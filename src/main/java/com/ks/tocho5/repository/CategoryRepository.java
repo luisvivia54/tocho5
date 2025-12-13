@@ -11,17 +11,17 @@ import java.util.List;
 @Repository
 public interface CategoryRepository extends JpaRepository<CategoryModel, Long> {
 
-    @Query("""
-        SELECT c
-        FROM CategoryModel c
-        WHERE (:leagueId IS NULL OR c.leagueId = :leagueId)
-          AND (:gender IS NULL OR UPPER(c.gender) = UPPER(:gender))
-        ORDER BY c.code ASC, c.name ASC
-    """)
-    List<CategoryModel> findFiltered(
-            @Param("leagueId") Long leagueId,
-            @Param("gender") String gender
-    );
+	@Query("""
+	        select c
+	          from CategoryModel c
+	         where (:leagueId is null or c.leagueId = :leagueId)
+	           and (:gender  is null or c.gender  = :gender)
+	         order by c.code asc, c.name asc
+	    """)
+	    List<CategoryModel> findFiltered(
+	            @Param("leagueId") Long leagueId,
+	            @Param("gender") String gender
+	    );
 
     // Útil para filtrar standings/equipos/partidos por code+gender
     List<CategoryModel> findByCodeIgnoreCase(String code);

@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
@@ -32,14 +31,21 @@ public class CategoryService {
                         c.getCode(),
                         c.getGender()
                 ))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private String normalizeGender(String gender) {
-        if (gender == null || gender.isBlank()
-                || "all".equalsIgnoreCase(gender)) {
-            return null;
-        }
-        return gender.toUpperCase(Locale.ROOT);
+        if (gender == null) return null;
+        String g = gender.trim();
+        if (g.isEmpty() || "all".equalsIgnoreCase(g)) return null;
+
+        g = g.toUpperCase(Locale.ROOT);
+
+        return switch (g) {
+            case "V", "VARONIL" -> "VARONIL";
+            case "F", "FEMENIL" -> "FEMENIL";
+            case "M", "MIXTO"   -> "MIXTO";
+            default -> g; // por si mandas algo distinto
+        };
     }
 }
