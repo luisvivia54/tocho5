@@ -56,13 +56,6 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
   // -------- EXISTENTES: traer standings + nombre del team en una sola consulta --------
 
   // Todos (sin filtro)
-  @Query("""
-         select s
-           from StandingTeamModel s
-           join fetch s.team
-         """)
-  List<StandingTeamModel> findAllWithTeam();
-
   // Filtrado típico por temporada/categoría (si lo sigues usando)
   @Query("""
          select s
@@ -73,22 +66,31 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
          """)
   List<StandingTeamModel> findBySeasonAndCategoryWithTeam(@Param("seasonId") Integer seasonId,
                                                           @Param("categoryId") Integer categoryId);
-
-  // -------- NUEVO: filtrado por leagueId + categoryCode + gender (rama) --------
   @Query("""
-         select s
-           from StandingTeamModel s
-           join fetch s.team,
-                CategoryModel c
-          where c.id = s.category_id
-            and (:leagueId     is null or c.league_id      = :leagueId)
-            and (:categoryCode is null or upper(c.code)    = upper(:categoryCode))
-            and (:gender       is null or upper(c.gender)  = upper(:gender))
-          order by s.table_points desc
-         """)
-  List<StandingTeamModel> findAllWithTeamFiltered(
-          @Param("leagueId") Integer leagueId,
-          @Param("categoryCode") String categoryCode,
-          @Param("gender") String gender
-  );
+          select s
+            from StandingTeamModel s
+            join fetch s.team
+           order by s.table_points desc
+          """)
+   List<StandingTeamModel> findAllWithTeam();
+
+   // ⚠️ Versión "safe" SIN tocar s.league_id, para que el contexto levante
+   @Query("""
+          select s
+            from StandingTeamModel s
+            join fetch s.team,
+                 CategoryModel c
+           where c.id = s.category_id
+             -- TODO: cuando tengamos mapeado league en StandingTeamModel,
+             --       cambiamos esta condición para filtrar de verdad por liga.
+             and (:leagueId is null or :leagueId is not null)
+             and (:categoryCode is null or upper(c.code) = upper(:categoryCode))
+             and (:gender      is null or upper(c.gender) = upper(:gender))
+           order by s.table_points desc
+          """)
+   List<StandingTeamModel> findAllWithTeamFiltered(
+           @Param("leagueId") Integer leagueId,
+           @Param("categoryCode") String categoryCode,
+           @Param("gender") String gender
+           );
 }
