@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 
-  // === UPDATE de status (ojo con el valor permitido por el CHECK) ===
+  // === UPDATE de status ===
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Transactional
   @Query("update GameStatusModel g set g.status = :status where g.game_id = :id")
@@ -19,7 +19,6 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 
   @Transactional
   default int finishById(Integer gameId) {
-    // Usa el literal EXACTO permitido por tu CHECK (probablemente 'FINISHED')
     return updateStatus(gameId, "FINISHED");
   }
 
@@ -80,9 +79,11 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
           Pageable pageable
   );
 
-  // === VERSIÓN SAFE DEL FILTRADO POR league/category/gender ===
-  // Por ahora IGNORA los filtros y solo reusa la consulta buena,
-  // para que el backend levante sin tronar por 'league_id'.
+  // === OJO: versión SAFE del filtrado ===
+  // IMPORTANTE:
+  //  - NO tiene @Query
+  //  - Es `default`
+  //  - NO usa league_id para que no truene el arranque
   default List<GameStatusModel> findScheduledWithTeamsFiltered(
           Integer leagueId,
           String categoryCode,
