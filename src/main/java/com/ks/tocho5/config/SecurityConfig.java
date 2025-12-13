@@ -36,7 +36,8 @@ public class SecurityConfig {
                     "/api/teams",      // lista de equipos
                     "/api/games",
                     "/api/gamesFinal",
-                    "/api/points"
+                    "/api/points",
+                    "/api/categories"
                 ).permitAll()
 
                 // GET con path variable (detalle / jugadores)
