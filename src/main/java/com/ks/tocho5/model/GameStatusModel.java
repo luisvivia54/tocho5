@@ -39,7 +39,7 @@ public class GameStatusModel {
 
   // OJO: en tu repo usas g.round_la, por eso debe existir el atributo
   @Column(name = "round_label")
-  private String round_la;
+  private String roundLabel;
 
   // opcional
   @Column(name = "updated_at")
@@ -134,12 +134,12 @@ public class GameStatusModel {
     this.match_date_utc = match_date_utc;
   }
 
-  public String getRound_la() {
-    return round_la;
+  public String getRoundLabel() {
+    return roundLabel;
   }
 
-  public void setRound_la(String round_la) {
-    this.round_la = round_la;
+  public void setRoundLabel(String roundLabel) {
+    this.roundLabel = roundLabel;
   }
 
   public LocalDateTime getUpdated_at() {
@@ -194,7 +194,7 @@ public class GameStatusModel {
         + ", away_team_id=" + away_team_id
         + ", status=" + status
         + ", match_date_utc=" + match_date_utc
-        + ", round_la=" + round_la
+        + ", round_label=" + roundLabel
         + "]";
   }
 }

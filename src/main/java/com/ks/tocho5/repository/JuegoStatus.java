@@ -11,99 +11,111 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 
-  // === UPDATE de status ===
+  // =========================
+  // UPDATE status
+  // =========================
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Transactional
-  @Query("update GameStatusModel g set g.status = :status where g.game_id = :id")
-  int updateStatus(@Param("id") Integer gameId, @Param("status") String status);
+  @Query("update GameStatusModel g set g.status = :status where g.game_id = :gameId")
+  int updateStatus(@Param("gameId") Integer gameId, @Param("status") String status);
 
   @Transactional
-  default int finishById(Integer gameId) {
-    return updateStatus(gameId, "FINISHED");
+  default int finalById(Integer gameId) {
+    return updateStatus(gameId, "FINAL");
   }
 
-  // === Queries simples por IDs ===
-  @Query("select g.home_team_id from GameStatusModel g where g.game_id = :id")
-  Integer findHomeTeamId(@Param("id") Integer gameId);
+  // =========================
+  // IDs rápidos
+  // =========================
+  @Query("select g.home_team_id from GameStatusModel g where g.game_id = :gameId")
+  Integer findHomeTeamId(@Param("gameId") Integer gameId);
 
-  @Query("select g.away_team_id from GameStatusModel g where g.game_id = :id")
-  Integer findAwayTeamId(@Param("id") Integer gameId);
+  @Query("select g.away_team_id from GameStatusModel g where g.game_id = :gameId")
+  Integer findAwayTeamId(@Param("gameId") Integer gameId);
 
+  // =========================
+  // Básicos por status
+  // =========================
   List<GameStatusModel> findAllByStatus(String status);
 
   default List<GameStatusModel> findAllScheduled() {
     return findAllByStatus("SCHEDULED");
   }
 
-  // === Partidos SCHEDULED con equipos cargados (para nombres) ===
+  // =========================
+  // SCHEDULED con equipos + category
+  // =========================
   @Query("""
-		   select g
-		     from GameStatusModel g
-		     join fetch g.homeTeam
-		     join fetch g.awayTeam
-		     join fetch g.category c
-		    where g.status = 'SCHEDULED'
-		    order by g.match_date_utc asc
-		""")
-		List<GameStatusModel> findAllScheduledWithTeams();
+     select g
+       from GameStatusModel g
+       join fetch g.homeTeam
+       join fetch g.awayTeam
+       join fetch g.category c
+      where g.status = 'SCHEDULED'
+      order by g.match_date_utc asc
+  """)
+  List<GameStatusModel> findAllScheduledWithTeams();
 
-  // Partidos FINALIZADOS (o el status que mandes) con equipos
+  // =========================
+  // Por status con equipos + category (sirve para FINAL / SCHEDULED / etc)
+  // + Pageable para size/limit
+  // =========================
   @Query("""
-		   select g
-		     from GameStatusModel g
-		     join fetch g.homeTeam
-		     join fetch g.awayTeam
-		     join fetch g.category c
-		    where g.status = :status
-		    order by g.match_date_utc desc
-		""")
-		List<GameStatusModel> findFinalWithTeams(@Param("status") String status, Pageable pageable);
+     select g
+       from GameStatusModel g
+       join fetch g.homeTeam
+       join fetch g.awayTeam
+       join fetch g.category c
+      where g.status = :status
+      order by g.match_date_utc desc
+  """)
+  List<GameStatusModel> findByStatusWithTeams(@Param("status") String status, Pageable pageable);
 
-
-  // Un solo partido con equipos
+  // =========================
+  // Un partido con equipos + category
+  // =========================
   @Query("""
-         select g
-           from GameStatusModel g
-           join fetch g.homeTeam
-           join fetch g.awayTeam
-          where g.game_id = :id
-         """)
-  GameStatusModel findOneWithTeams(@Param("id") Integer gameId);
+     select g
+       from GameStatusModel g
+       join fetch g.homeTeam
+       join fetch g.awayTeam
+       join fetch g.category c
+      where g.game_id = :gameId
+  """)
+  GameStatusModel findOneWithTeams(@Param("gameId") Integer gameId);
 
+  // =========================
   // Últimos juegos de un equipo
+  // =========================
   @Query("""
-         select g
-           from GameStatusModel g
-          where (g.home_team_id = :teamId or g.away_team_id = :teamId)
-          order by g.match_date_utc desc
-         """)
-  List<GameStatusModel> findLastGamesForTeam(
-          @Param("teamId") Integer teamId,
-          Pageable pageable
-  );
+     select g
+       from GameStatusModel g
+      where (g.home_team_id = :teamId or g.away_team_id = :teamId)
+      order by g.match_date_utc desc
+  """)
+  List<GameStatusModel> findLastGamesForTeam(@Param("teamId") Integer teamId, Pageable pageable);
 
-  // === OJO: versión SAFE del filtrado ===
-  // IMPORTANTE:
-  //  - NO tiene @Query
-  //  - Es `default`
-  //  - NO usa league_id para que no truene el arranque
+  // =========================
+  // SCHEDULED + filtros: jornada/ gender / code / league
+  // OJO: usa round_label (no round_la)
+  // =========================
   @Query("""
-		   select g
-		     from GameStatusModel g
-		     join fetch g.homeTeam
-		     join fetch g.awayTeam
-		     join fetch g.category c
-		    where g.status = 'SCHEDULED'
-		      and (:leagueId is null or c.leagueId = :leagueId)
-		      and (:categoryCode is null or upper(c.code) = upper(:categoryCode))
-		      and (:gender is null or upper(c.gender) = upper(:gender))
-		      and (:round is null or g.round_la = :round)
-		    order by g.match_date_utc asc
-		""")
-		List<GameStatusModel> findScheduledWithTeamsFiltered(
-		    @Param("leagueId") Integer leagueId,
-		    @Param("categoryCode") String categoryCode,
-		    @Param("gender") String gender,
-		    @Param("round") String round
-		);
+     select g
+       from GameStatusModel g
+       join fetch g.homeTeam
+       join fetch g.awayTeam
+       join fetch g.category c
+      where g.status = 'SCHEDULED'
+        and (:leagueId is null or c.leagueId = :leagueId)
+        and (:code is null or upper(c.code) = upper(:code))
+        and (:gender is null or upper(c.gender) = upper(:gender))
+        and (:roundLabel is null or g.roundLabel = :roundLabel)
+      order by g.match_date_utc asc
+  """)
+  List<GameStatusModel> findScheduledWithTeamsFiltered(
+      @Param("leagueId") Integer leagueId,
+      @Param("code") String code,
+      @Param("gender") String gender,
+      @Param("roundLabel") String roundLabel
+  );
 }

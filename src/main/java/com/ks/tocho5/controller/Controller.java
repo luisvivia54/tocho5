@@ -136,26 +136,30 @@ public class Controller {
     @GetMapping("/games")
     public List<GameStatusModel> findAllGames(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
-            @RequestParam(name = "categoryCode", required = false) String categoryCode,
-            @RequestParam(name = "gender", required = false) String gender,
-            @RequestParam(name = "round", required = false) String round
+            @RequestParam(name = "code", required = false) String code,          // <-- code = category.code (rama)
+            @RequestParam(name = "gender", required = false) String gender,      // <-- gender = category.gender (categoria)
+            @RequestParam(name = "roundLabel", required = false) String roundLabel // <-- jornada (round_label)
     ) {
-        String code = normalizeFilterParam(categoryCode);
-        String gen = normalizeFilterParam(gender);
-        String rnd = normalizeFilterParam(round);
+        String c = normalizeFilterParam(code);
+        String g = normalizeFilterParam(gender);
+        String r = normalizeFilterParam(roundLabel);
 
-        if (leagueId == null && code == null && gen == null && rnd == null) {
+        // si no mandan filtros -> scheduled normal
+        if (leagueId == null && c == null && g == null && r == null) {
             return juegostat.findAllScheduledWithTeams();
         }
 
-        return juegostat.findScheduledWithTeamsFiltered(leagueId, code, gen, rnd);
+        // scheduled con filtros
+        return juegostat.findScheduledWithTeamsFiltered(leagueId, c, g, r);
     }
 
     @GetMapping("/gamesFinal")
-    public List<GameStatusModel> findAllFinalGames() {
-        return juegostat.findFinalWithTeams("FINAL", PageRequest.of(0, 5));
+    public List<GameStatusModel> findAllFinalGames(
+            @RequestParam(name = "size", required = false, defaultValue = "5") int size
+    ) {
+        // FINAL real, no FINISHED
+        return juegostat.findByStatusWithTeams("FINAL", PageRequest.of(0, size));
     }
-
     /**
      * GET /api/points
      */

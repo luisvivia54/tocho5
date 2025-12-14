@@ -23,7 +23,7 @@ public class GameService {
 	public String saveGame(GameModel gamemodel) {
 		try {
 			juegosrepo.save(gamemodel);
-			juegostatus.finishById(gamemodel.getGame_id());
+			juegostatus.finalById(gamemodel.getGame_id());
 			standrepo.addOneToGp(juegostatus.findHomeTeamId(gamemodel.getGame_id()));
 			standrepo.addOneToGp(juegostatus.findAwayTeamId(gamemodel.getGame_id()));
 			
