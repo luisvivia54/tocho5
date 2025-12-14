@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface EquiposRepository extends JpaRepository<EquiposModel, Integer> {
+public interface EquiposRepository extends JpaRepository<EquiposModel, Long> {
 
     // ✅ Lista de equipos + ÚLTIMA inscripción (season/category) + datos de category
     @Query(value = """
