@@ -1,5 +1,6 @@
 package com.ks.tocho5.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -11,9 +12,12 @@ public class GameModel{
 	public String toString() {
 		return "DatoValorDTO [local_team=" + home_score + ", away_team=" + away_score + ", game_id="+ game_id+ "]";
 	}
+	 @Column(name = "home_score")
 	private Integer home_score;
+	 @Column(name = "away_score")
 	private Integer away_score;
 	@Id
+    @Column(name = "game_id")
 	private Integer game_id;
 
 	/**

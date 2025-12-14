@@ -37,25 +37,30 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 
   // === Partidos SCHEDULED con equipos cargados (para nombres) ===
   @Query("""
-         select g
-           from GameStatusModel g
-           join fetch g.homeTeam
-           join fetch g.awayTeam
-          where g.status = 'SCHEDULED'
-          order by g.match_date_utc asc
-         """)
-  List<GameStatusModel> findAllScheduledWithTeams();
+		   select g
+		     from GameStatusModel g
+		     join fetch g.homeTeam
+		     join fetch g.awayTeam
+		     join fetch g.category c
+		     left join fetch g.score s
+		    where g.status = 'SCHEDULED'
+		    order by g.match_date_utc asc
+		""")
+		List<GameStatusModel> findAllScheduledWithTeams();
 
   // Partidos FINALIZADOS (o el status que mandes) con equipos
   @Query("""
-         select g
-           from GameStatusModel g
-           join fetch g.homeTeam
-           join fetch g.awayTeam
-          where g.status = :status
-          order by g.updated_at desc, g.game_id desc
-         """)
-  List<GameStatusModel> findFinalWithTeams(@Param("status") String status, Pageable pageable);
+		   select g
+		     from GameStatusModel g
+		     join fetch g.homeTeam
+		     join fetch g.awayTeam
+		     join fetch g.category c
+		     left join fetch g.score s
+		    where g.status = :status
+		    order by g.match_date_utc desc
+		""")
+		List<GameStatusModel> findFinalWithTeams(@Param("status") String status, Pageable pageable);
+
 
   // Un solo partido con equipos
   @Query("""
@@ -84,11 +89,25 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   //  - NO tiene @Query
   //  - Es `default`
   //  - NO usa league_id para que no truene el arranque
-  default List<GameStatusModel> findScheduledWithTeamsFiltered(
-          Integer leagueId,
-          String categoryCode,
-          String gender
-  ) {
-    return findAllScheduledWithTeams();
-  }
+  @Query("""
+		   select g
+		     from GameStatusModel g
+		     join fetch g.homeTeam
+		     join fetch g.awayTeam
+		     join fetch g.category c
+		     left join fetch g.score s
+		    where g.status = 'SCHEDULED'
+		      and (:leagueId is null or c.leagueId = :leagueId)
+		      and (:categoryCode is null or upper(c.code) = upper(:categoryCode))
+		      and (:gender is null or upper(c.gender) = upper(:gender))
+		      and (:round is null or g.round_la = :round)
+		    order by g.match_date_utc asc
+		""")
+		List<GameStatusModel> findScheduledWithTeamsFiltered(
+		    @Param("leagueId") Integer leagueId,
+		    @Param("categoryCode") String categoryCode,
+		    @Param("gender") String gender,
+		    @Param("round") String round
+		);
+
 }
