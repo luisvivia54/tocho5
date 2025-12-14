@@ -38,7 +38,7 @@ public class GameStatusModel {
   private LocalDateTime match_date_utc;
 
   // OJO: en tu repo usas g.round_la, por eso debe existir el atributo
-  @Column(name = "round_la")
+  @Column(name = "round_label")
   private String round_la;
 
   // opcional
