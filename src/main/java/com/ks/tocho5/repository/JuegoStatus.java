@@ -42,7 +42,6 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 		     join fetch g.homeTeam
 		     join fetch g.awayTeam
 		     join fetch g.category c
-		     left join fetch g.score s
 		    where g.status = 'SCHEDULED'
 		    order by g.match_date_utc asc
 		""")
@@ -55,7 +54,6 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 		     join fetch g.homeTeam
 		     join fetch g.awayTeam
 		     join fetch g.category c
-		     left join fetch g.score s
 		    where g.status = :status
 		    order by g.match_date_utc desc
 		""")
@@ -95,7 +93,6 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 		     join fetch g.homeTeam
 		     join fetch g.awayTeam
 		     join fetch g.category c
-		     left join fetch g.score s
 		    where g.status = 'SCHEDULED'
 		      and (:leagueId is null or c.leagueId = :leagueId)
 		      and (:categoryCode is null or upper(c.code) = upper(:categoryCode))
@@ -109,5 +106,4 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
 		    @Param("gender") String gender,
 		    @Param("round") String round
 		);
-
 }
