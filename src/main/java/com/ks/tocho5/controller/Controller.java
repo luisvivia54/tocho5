@@ -17,6 +17,7 @@ import com.ks.tocho5.model.EquiposStatsDTO;
 import com.ks.tocho5.model.GameModel;
 import com.ks.tocho5.model.GameStatusModel;
 import com.ks.tocho5.model.PlayerModel;
+import com.ks.tocho5.model.PointsRowProjection;
 import com.ks.tocho5.model.StandingTeamModel;
 import com.ks.tocho5.model.TeamStatsFilterDTO;
 import com.ks.tocho5.model.AppUser;
@@ -164,7 +165,7 @@ public class Controller {
      * GET /api/points
      */
     @GetMapping("/points")
-    public List<StandingTeamModel> findTablePoints(
+    public List<PointsRowProjection> findTablePoints(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
             @RequestParam(name = "categoryCode", required = false) String categoryCode,
             @RequestParam(name = "gender", required = false) String gender
@@ -172,11 +173,7 @@ public class Controller {
         String code = normalizeFilterParam(categoryCode);
         String gen = normalizeFilterParam(gender);
 
-        if (leagueId == null && code == null && gen == null) {
-            return standingrepo.findAllWithTeam();
-        }
-
-        return standingrepo.findAllWithTeamFiltered(leagueId, code, gen);
+        return standingrepo.findPointsList(leagueId, code, gen);
     }
 
     @PostMapping("/search")
