@@ -265,9 +265,9 @@ public class Controller {
 
     @GetMapping("/teams/{teamId}")
     public ResponseEntity<EquiposModel> getTeamById(@PathVariable Integer teamId) {
-        return repository.findById(teamId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    	return repository.findById(teamId.longValue())
+    	        .map(ResponseEntity::ok)
+    	        .orElse(ResponseEntity.notFound().build());
     }
 
     // ================= LOGO DEL EQUIPO =================
@@ -283,7 +283,7 @@ public class Controller {
 
         AppUser user = userservice.syncFromJwt(jwt);
 
-        EquiposModel team = repository.findById(teamId)
+        EquiposModel team = repository.findById(teamId.longValue())
                 .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
 
         if (!user.isAdmin() &&
