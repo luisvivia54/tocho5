@@ -1,45 +1,72 @@
 package com.ks.tocho5.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "category")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class CategoryModel {
 
-  @Id
-  @Column(name = "category_id")
-  private Integer category_id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "category_id")
+    private Long id;
 
-  // OJO: en tu query usas c.leagueId, c.code, c.gender
-  @Column(name = "league_id")
-  private Integer leagueId;
+    @Column(name = "league_id", nullable = false)
+    private Long leagueId;
 
-  @Column(name = "code")
-  private String code;
+    @Column(name = "name", nullable = false)
+    private String name;
 
-  @Column(name = "gender")
-  private String gender;
+    // Código corto: "+35", "U-16", etc.
+    @Column(name = "code", nullable = false)
+    private String code;
 
-  @Column(name = "name")
-  private String name;
+    // "VARONIL" | "FEMENIL" | "MIXTO" (o null)
+    @Column(name = "gender")
+    private String gender;
 
-  public Integer getCategory_id() { return category_id; }
-  public void setCategory_id(Integer category_id) { this.category_id = category_id; }
+    public CategoryModel() {
+    }
 
-  public Integer getLeagueId() { return leagueId; }
-  public void setLeagueId(Integer leagueId) { this.leagueId = leagueId; }
+    // --- getters & setters ---
 
-  public String getCode() { return code; }
-  public void setCode(String code) { this.code = code; }
+    public Long getId() {
+        return id;
+    }
 
-  public String getGender() { return gender; }
-  public void setGender(String gender) { this.gender = gender; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-  public String getName() { return name; }
-  public void setName(String name) { this.name = name; }
+    public Long getLeagueId() {
+        return leagueId;
+    }
+
+    public void setLeagueId(Long leagueId) {
+        this.leagueId = leagueId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 }
