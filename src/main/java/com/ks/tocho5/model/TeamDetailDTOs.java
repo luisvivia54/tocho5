@@ -19,7 +19,9 @@ public class TeamDetailDTOs {
 
     public record CategoryInfoDTO(
             Integer id,
-            String name
+            String gender,
+            String name,
+            String code
     ) {}
 
     // 👇 CAMBIO: teamId ahora es Integer

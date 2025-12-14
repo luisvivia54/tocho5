@@ -7,4 +7,6 @@ public interface TeamEnrollmentInfoProjection {
     String  getSeasonName();
     Integer getCategoryId();
     String  getCategoryName();
+    String getCategoryCode();
+    String getCategoryGender();
 }

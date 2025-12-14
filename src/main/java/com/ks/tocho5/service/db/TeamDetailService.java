@@ -100,8 +100,10 @@ public class TeamDetailService {
                     enr.getSeasonName()
             );
             categoryInfo = new CategoryInfoDTO(
-                    enr.getCategoryId(),
-                    enr.getCategoryName()
+            		 enr.getCategoryId(),
+            		    enr.getCategoryGender(),
+            		    enr.getCategoryName(),
+            		    enr.getCategoryCode()
             );
         }
 

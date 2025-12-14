@@ -49,23 +49,26 @@ public interface EquiposFiltroRepository extends JpaRepository<EquiposStatsModel
 		      Pageable pageable
 		  );
 
-    @Query(value = """
-        SELECT 
-          e.team_id        AS teamId,
-          e.season_id      AS seasonId,
-          s.name           AS seasonName,
-          e.category_id    AS categoryId,
-          c.name           AS categoryName
-        FROM team_enrollment e
-        JOIN season s   ON s.season_id   = e.season_id
-        JOIN category c ON c.category_id = e.category_id
-        WHERE e.team_id = :teamId
-        ORDER BY e.season_id DESC
-        LIMIT 1
-        """,
-        nativeQuery = true
-    )
-    Optional<TeamEnrollmentInfoProjection> findLatestEnrollmentForTeam(
-            @Param("teamId") Integer teamId
-    );
+	@Query(value = """
+		    SELECT 
+		      e.team_id        AS teamId,
+		      e.season_id      AS seasonId,
+		      s.name           AS seasonName,
+		      e.category_id    AS categoryId,
+		      c.name           AS categoryName,
+		      c.gender         AS categoryGender,
+		      c.code           AS categoryCode
+		    FROM team_enrollment e
+		    JOIN season s   ON s.season_id   = e.season_id
+		    JOIN category c ON c.category_id = e.category_id
+		    WHERE e.team_id = :teamId
+		    ORDER BY e.season_id DESC
+		    LIMIT 1
+		    """,
+		    nativeQuery = true
+		)
+		Optional<TeamEnrollmentInfoProjection> findLatestEnrollmentForTeam(
+		    @Param("teamId") Integer teamId
+		);
+
 }
