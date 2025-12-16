@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "game")
@@ -184,6 +185,28 @@ public class GameStatusModel {
   public String getAwayTeamName() {
     return awayTeam != null ? awayTeam.getName() : null;
   }
+//================== SCORE (NO PERSISTE EN game) ==================
+ @Transient
+ private Integer homeScore;
+
+ @Transient
+ private Integer awayScore;
+
+ public Integer getHomeScore() {
+   return homeScore;
+ }
+
+ public void setHomeScore(Integer homeScore) {
+   this.homeScore = homeScore;
+ }
+
+ public Integer getAwayScore() {
+   return awayScore;
+ }
+
+ public void setAwayScore(Integer awayScore) {
+   this.awayScore = awayScore;
+ }
 
   @Override
   public String toString() {

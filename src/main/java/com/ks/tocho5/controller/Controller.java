@@ -30,6 +30,7 @@ import com.ks.tocho5.model.TeamListProjection;
 
 import com.ks.tocho5.repository.EquiposRepository;
 import com.ks.tocho5.repository.JuegoStatus;
+import com.ks.tocho5.repository.JuegosRepository;
 import com.ks.tocho5.repository.StandingTeamRepository;
 
 import com.ks.tocho5.service.db.AppUserService;
@@ -58,6 +59,8 @@ public class Controller {
     private final TeamDetailService teamDetailService;
     private final TeamCarouselService teamCarouselService;
     private final CategoryService categoryService;
+    private final JuegosRepository juegosrepo;
+    
 
     public Controller(
             EquiposRepository repository,
@@ -65,6 +68,7 @@ public class Controller {
             AppUserService userservice,
             GameService gameservice,
             JuegoStatus juegostat,
+            JuegosRepository juegosrepo,
             StandingTeamRepository standingrepo,
             TeamService teamService,
             R2StorageService r2StorageService,
@@ -73,6 +77,7 @@ public class Controller {
             TeamCarouselService teamCarouselService,
             CategoryService categoryService
     ) {
+    	this.juegosrepo = juegosrepo;
         this.repository = repository;
         this.service = service;
         this.gameservice = gameservice;
@@ -151,16 +156,58 @@ public class Controller {
         }
 
         // scheduled con filtros
-        return juegostat.findScheduledWithTeamsFiltered(leagueId, c, g, r);
+        return juegostat.findScheduledWithTeamsFiltered( c, g, r);
     }
 
     @GetMapping("/gamesFinal")
     public List<GameStatusModel> findAllFinalGames(
-            @RequestParam(name = "size", required = false, defaultValue = "5") int size
+            @RequestParam(name = "leagueId", required = false) Integer leagueId,
+            @RequestParam(name = "code", required = false) String code,              // category.code (rama)
+            @RequestParam(name = "gender", required = false) String gender,          // category.gender (categoria)
+            @RequestParam(name = "roundLabel", required = false) String roundLabel,  // jornada
+            @RequestParam(name = "size", required = false, defaultValue = "5") int size,
+            @RequestParam(name = "all", required = false, defaultValue = "false") boolean all
     ) {
-        // FINAL real, no FINISHED
-        return juegostat.findByStatusWithTeams("FINAL", PageRequest.of(0, size));
+        String c = normalizeFilterParam(code);
+        String g = normalizeFilterParam(gender);
+        String r = normalizeFilterParam(roundLabel);
+
+        boolean hasFilters = (leagueId != null || c != null || g != null || r != null);
+
+        // ✅ Si piden all=true o vienen filtros => NO limitamos
+        List<GameStatusModel> finals = (all || hasFilters)
+        		? juegostat.findFinalWithTeamsFiltered(c, g, r) // <-- sin pageable
+                : juegostat.findFinalWithTeams("FINAL", PageRequest.of(0, size));    // <-- home: últimos N
+
+        if (finals == null || finals.isEmpty()) return finals;
+
+        // ========== INYECTAR MARCADOR (game_score) ==========
+        List<Integer> gameIds = finals.stream()
+                .map(GameStatusModel::getGame_id)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        if (gameIds.isEmpty()) return finals;
+
+        List<GameModel> scores = juegosrepo.findAllById(gameIds);
+
+        java.util.Map<Integer, GameModel> scoreByGameId = scores.stream()
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toMap(
+                        GameModel::getGame_id,
+                        java.util.function.Function.identity(),
+                        (a, b) -> a
+                ));
+
+        for (GameStatusModel gm : finals) {
+            GameModel sc = scoreByGameId.get(gm.getGame_id());
+            gm.setHomeScore(sc != null ? sc.getHome_score() : null);
+            gm.setAwayScore(sc != null ? sc.getAway_score() : null);
+        }
+
+        return finals;
     }
+
     /**
      * GET /api/points
      */

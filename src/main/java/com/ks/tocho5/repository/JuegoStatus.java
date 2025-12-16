@@ -51,7 +51,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
-      where g.status = 'SCHEDULED'
+      where upper(g.status) = 'SCHEDULED'
       order by g.match_date_utc asc
   """)
   List<GameStatusModel> findAllScheduledWithTeams();
@@ -66,10 +66,36 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
-      where g.status = :status
+      where upper(g.status) = upper(:status)
       order by g.match_date_utc desc
   """)
   List<GameStatusModel> findByStatusWithTeams(@Param("status") String status, Pageable pageable);
+
+  // ✅ Alias que tu controller usa (para FINAL con limit)
+  default List<GameStatusModel> findFinalWithTeams(String status, Pageable pageable) {
+    return findByStatusWithTeams(status, pageable);
+  }
+
+  // =========================
+  // FINAL + filtros (SIN LIMIT)  ✅ (para cuando mandas code/gender/roundLabel)
+  // =========================
+  @Query("""
+     select g
+       from GameStatusModel g
+       join fetch g.homeTeam
+       join fetch g.awayTeam
+       join fetch g.category c
+      where upper(g.status) = 'FINAL'
+        and (:code is null or upper(c.code) = upper(:code))
+        and (:gender is null or upper(c.gender) = upper(:gender))
+        and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
+      order by g.match_date_utc desc
+  """)
+  List<GameStatusModel> findFinalWithTeamsFiltered(
+      @Param("code") String code,
+      @Param("gender") String gender,
+      @Param("roundLabel") String roundLabel
+  );
 
   // =========================
   // Un partido con equipos + category
@@ -96,8 +122,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   List<GameStatusModel> findLastGamesForTeam(@Param("teamId") Integer teamId, Pageable pageable);
 
   // =========================
-  // SCHEDULED + filtros: jornada/ gender / code / league
-  // OJO: usa round_label (no round_la)
+  // SCHEDULED + filtros: jornada/ gender / code  (SIN league)
   // =========================
   @Query("""
      select g
@@ -105,15 +130,13 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
-      where g.status = 'SCHEDULED'
-        and (:leagueId is null or c.leagueId = :leagueId)
+      where upper(g.status) = 'SCHEDULED'
         and (:code is null or upper(c.code) = upper(:code))
         and (:gender is null or upper(c.gender) = upper(:gender))
-        and (:roundLabel is null or g.roundLabel = :roundLabel)
+        and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
       order by g.match_date_utc asc
   """)
   List<GameStatusModel> findScheduledWithTeamsFiltered(
-      @Param("leagueId") Integer leagueId,
       @Param("code") String code,
       @Param("gender") String gender,
       @Param("roundLabel") String roundLabel
