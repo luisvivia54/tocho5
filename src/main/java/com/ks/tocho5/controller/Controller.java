@@ -171,7 +171,7 @@ public class Controller {
             @RequestParam(name = "code", required = false) String code,              // category.code (rama)
             @RequestParam(name = "gender", required = false) String gender,          // category.gender (categoria)
             @RequestParam(name = "roundLabel", required = false) String roundLabel,  // jornada
-            @RequestParam(name = "size", required = false, defaultValue = "5") int size,
+            @RequestParam(name = "size", required = false, defaultValue = "500") int size,
             @RequestParam(name = "all", required = false, defaultValue = "false") boolean all
     ) {
         String c = normalizeFilterParam(code);
