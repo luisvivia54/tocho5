@@ -15,6 +15,7 @@ import java.util.List;
 
 import com.ks.tocho5.model.EquiposStatsDTO;
 import com.ks.tocho5.model.GameModel;
+import com.ks.tocho5.model.GameScoreUpdateRequest;
 import com.ks.tocho5.model.GameStatusModel;
 import com.ks.tocho5.model.PlayerModel;
 import com.ks.tocho5.model.PointsRowProjection;
@@ -239,14 +240,12 @@ public class Controller {
     // ================= ACTUALIZAR PARTIDO =================
 
     @PostMapping("/partido/update")
-    public String partidoupdate(@RequestBody GameModel datosEntrada) {
+    public Object partidoUpdate(@RequestBody java.util.List<GameScoreUpdateRequest> batch) {
         try {
-            String respSave = gameservice.saveGame(datosEntrada);
-            if (respSave.equals("OK")) return respSave;
-            return "Algo salio mal";
+            return gameservice.saveGames(batch);
         } catch (Exception e) {
             e.printStackTrace();
-            return "error" + e;
+            return "error " + e.getMessage();
         }
     }
 
