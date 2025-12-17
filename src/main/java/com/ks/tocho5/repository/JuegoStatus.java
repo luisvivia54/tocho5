@@ -141,11 +141,4 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
       @Param("gender") String gender,
       @Param("roundLabel") String roundLabel
   );
-  @Query("select g.status from GameStatusModel g where g.game_id = :gameId")
-  String findStatusById(@Param("gameId") Integer gameId);
-  
-  @Transactional
-  default int cancelById(Integer gameId) {
-    return updateStatus(gameId, "CANCELLED");
-  }
 }

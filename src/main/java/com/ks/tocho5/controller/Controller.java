@@ -12,10 +12,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import com.ks.tocho5.model.EquiposStatsDTO;
 import com.ks.tocho5.model.GameModel;
-import com.ks.tocho5.model.GameScoreUpdateRequest;
 import com.ks.tocho5.model.GameStatusModel;
 import com.ks.tocho5.model.PlayerModel;
 import com.ks.tocho5.model.PointsRowProjection;
@@ -61,6 +63,7 @@ public class Controller {
     private final TeamCarouselService teamCarouselService;
     private final CategoryService categoryService;
     private final JuegosRepository juegosrepo;
+    private final ObjectMapper objectMapper;
     
 
     public Controller(
@@ -76,7 +79,8 @@ public class Controller {
             PlayerService playerService,
             TeamDetailService teamDetailService,
             TeamCarouselService teamCarouselService,
-            CategoryService categoryService
+            CategoryService categoryService,
+            ObjectMapper objectMapper
     ) {
     	this.juegosrepo = juegosrepo;
         this.repository = repository;
@@ -91,6 +95,7 @@ public class Controller {
         this.teamDetailService = teamDetailService;
         this.teamCarouselService = teamCarouselService;
         this.categoryService = categoryService;
+        this.objectMapper = objectMapper;
     }
 
     // ================= EQUIPOS / PARTIDOS / TABLA =================
@@ -240,9 +245,23 @@ public class Controller {
     // ================= ACTUALIZAR PARTIDO =================
 
     @PostMapping("/partido/update")
-    public Object partidoUpdate(@RequestBody java.util.List<GameScoreUpdateRequest> batch) {
+    public Object partidoupdate(@RequestBody JsonNode body) {
         try {
-            return gameservice.saveGames(batch);
+            // Si mandas ARRAY => batch
+            if (body.isArray()) {
+                List<GameModel> batch = objectMapper.convertValue(
+                        body,
+                        new TypeReference<List<GameModel>>() {}
+                );
+                return gameservice.saveGames(batch);
+            }
+
+            // Si mandas OBJETO => como antes
+            GameModel datosEntrada = objectMapper.convertValue(body, GameModel.class);
+            String respSave = gameservice.saveGame(datosEntrada);
+            if ("OK".equals(respSave)) return respSave;
+            return "Algo salio mal";
+
         } catch (Exception e) {
             e.printStackTrace();
             return "error " + e.getMessage();
