@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TeamService {
@@ -103,6 +104,21 @@ public class TeamService {
             team.setShortName(req.shortName().trim());
         } else {
             team.setShortName(null);
+        }
+        
+     // Colores (solo si vienen)
+        if (req.colorPrimary() != null && !req.colorPrimary().isBlank()) {
+            String cp = req.colorPrimary().trim();
+            if (!Objects.equals(team.getColorPrimary(), cp)) {
+                team.setColorPrimary(cp);
+            }
+        }
+
+        if (req.colorSecondary() != null && !req.colorSecondary().isBlank()) {
+            String cs = req.colorSecondary().trim();
+            if (!Objects.equals(team.getColorSecondary(), cs)) {
+                team.setColorSecondary(cs);
+            }
         }
 
         return equiposRepository.save(team);

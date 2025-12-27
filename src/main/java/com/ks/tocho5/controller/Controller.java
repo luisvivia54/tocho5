@@ -279,7 +279,9 @@ public class Controller {
 
     public record UpdateTeamRequest(
             String name,
-            String shortName
+            String shortName,
+            String colorPrimary,
+            String colorSecondary
     ) {}
 
     public record MyTeamSummary(
@@ -319,7 +321,14 @@ public class Controller {
     ) {
         return teamService.createTeamForCurrentUser(jwt, request);
     }
-
+    
+    @GetMapping("/teams/{teamId}")
+    public ResponseEntity<EquiposModel> getTeamById(@PathVariable Integer teamId) {
+    	return repository.findById(teamId.longValue())
+    	        .map(ResponseEntity::ok)
+    	        .orElse(ResponseEntity.notFound().build());
+    }
+    
     @PutMapping("/teams/{teamId}")
     public EquiposModel updateMyTeam(
             @AuthenticationPrincipal Jwt jwt,
@@ -329,12 +338,7 @@ public class Controller {
         return teamService.updateTeamForCurrentUser(jwt, teamId.longValue(), request);
     }
 
-    @GetMapping("/teams/{teamId}")
-    public ResponseEntity<EquiposModel> getTeamById(@PathVariable Integer teamId) {
-    	return repository.findById(teamId.longValue())
-    	        .map(ResponseEntity::ok)
-    	        .orElse(ResponseEntity.notFound().build());
-    }
+
 
     // ================= LOGO DEL EQUIPO =================
 
