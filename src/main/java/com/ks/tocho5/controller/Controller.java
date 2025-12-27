@@ -274,7 +274,9 @@ public class Controller {
             String name,
             Integer seasonId,
             Integer categoryId,
-            Integer leagueId
+            Integer leagueId,
+            String colorPrimary,
+            String colorSecondary
     ) {}
 
     public record UpdateTeamRequest(

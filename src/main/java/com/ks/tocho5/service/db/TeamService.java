@@ -35,11 +35,7 @@ public class TeamService {
     }
 
     // opcional: versión vieja para compatibilidad
-    @Transactional
-    public EquiposModel createTeamForCurrentUser(Jwt jwt, String name) {
-        CreateTeamRequest req = new CreateTeamRequest(name, null, null, null);
-        return createTeamForCurrentUser(jwt, req);
-    }
+
 
     @Transactional
     public EquiposModel createTeamForCurrentUser(Jwt jwt, CreateTeamRequest req) {
@@ -57,6 +53,8 @@ public class TeamService {
         // 1) Crear equipo
         EquiposModel team = new EquiposModel();
         team.setName(req.name());
+        team.setColorPrimary(req.colorPrimary());
+        team.setColorSecondary(req.colorSecondary());
         team.setCaptain(user);
 
         if (req.leagueId() != null) {
