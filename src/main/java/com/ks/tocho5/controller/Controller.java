@@ -21,6 +21,7 @@ import com.ks.tocho5.model.GameModel;
 import com.ks.tocho5.model.GameStatusModel;
 import com.ks.tocho5.model.PlayerModel;
 import com.ks.tocho5.model.PointsRowProjection;
+import com.ks.tocho5.model.SetTeamActiveRequestDTO;
 import com.ks.tocho5.model.StandingTeamModel;
 import com.ks.tocho5.model.TeamStatsFilterDTO;
 import com.ks.tocho5.model.AppUser;
@@ -506,5 +507,18 @@ public class Controller {
         String v = value.trim();
         if (v.isEmpty() || "all".equalsIgnoreCase(v)) return null;
         return v.toUpperCase();
+    }
+    @PatchMapping("/teams/{teamId}/active")
+    public ResponseEntity<EquiposModel> setTeamActive(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Integer teamId,
+            @RequestBody SetTeamActiveRequestDTO req
+    ) {
+        if (req == null || req.getIsActive() == null) {
+            throw new IllegalArgumentException("Falta isActive (true/false)");
+        }
+
+        EquiposModel updated = teamService.setTeamActive(jwt, teamId, req.getIsActive());
+        return ResponseEntity.ok(updated);
     }
 }

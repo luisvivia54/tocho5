@@ -140,4 +140,35 @@ public class TeamService {
         // por ahora se regresa todo para mantener el comportamiento actual
     	 return equiposRepository.findActiveTeamsFiltered(leagueId, categoryCode, gender);
     }
+    
+
+@Transactional
+public EquiposModel setTeamActive(Jwt jwt, Integer teamId, boolean isActive) {
+    AppUser user = getCurrentUser(jwt);
+
+    // ✅ Solo permitimos DESACTIVAR
+    if (isActive) {
+        throw new RuntimeException("No se permite activar equipos por este endpoint. Solo desactivar (isActive=false).");
+    }
+
+    EquiposModel team = equiposRepository.findById(teamId.longValue())
+            .orElseThrow(() -> new RuntimeException("Equipo no encontrado"));
+
+    boolean isAdmin = user.isAdmin();
+
+    // 👉 Esto es "isCaptainOwner": el usuario actual es el capitán de ESE equipo
+    boolean isCaptainOwner =
+            team.getCaptain() != null
+            && team.getCaptain().getId() != null
+            && Objects.equals(team.getCaptain().getId(), user.getId());
+
+    // ✅ Admin o Capitán dueño pueden DESACTIVAR
+    if (!isAdmin && !isCaptainOwner) {
+        throw new RuntimeException("No tienes permisos para desactivar este equipo");
+    }
+
+    // (opcional) si ya está false, lo dejas igual (idempotente)
+    team.setIsActive(false);
+    return equiposRepository.save(team);
+}
 }
