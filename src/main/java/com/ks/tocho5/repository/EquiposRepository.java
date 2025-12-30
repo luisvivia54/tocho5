@@ -46,6 +46,7 @@ public interface EquiposRepository extends JpaRepository<EquiposModel, Long> {
         WHERE (:leagueId IS NULL OR t.league_id = :leagueId)
           AND (:gender IS NULL OR UPPER(c.gender) = :gender)
           AND (:code   IS NULL OR UPPER(c.code)   = :code)
+          AND t.is_active = true
 
         ORDER BY t.name ASC
         """, nativeQuery = true)
@@ -57,4 +58,30 @@ public interface EquiposRepository extends JpaRepository<EquiposModel, Long> {
 
     int countByCaptain(AppUser captain);
     List<EquiposModel> findByCaptain(AppUser captain);
+    
+    List<EquiposModel> findByIsActiveTrueOrderByNameAsc();
+
+    @Query(value = """
+        SELECT t.*
+        FROM team t
+        LEFT JOIN LATERAL (
+          SELECT e.season_id, e.category_id
+          FROM team_enrollment e
+          WHERE e.team_id = t.team_id
+          ORDER BY e.season_id DESC
+          LIMIT 1
+        ) en ON TRUE
+        LEFT JOIN category c ON c.category_id = en.category_id
+        WHERE t.is_active = true
+          AND (:leagueId IS NULL OR t.league_id = :leagueId)
+          AND (:gender IS NULL OR UPPER(c.gender) = :gender)
+          AND (:code   IS NULL OR UPPER(c.code)   = :code)
+        ORDER BY t.name ASC
+    """, nativeQuery = true)
+    List<EquiposModel> findActiveTeamsFiltered(
+            @Param("leagueId") Integer leagueId,
+            @Param("code") String code,
+            @Param("gender") String gender
+    );
+
 }

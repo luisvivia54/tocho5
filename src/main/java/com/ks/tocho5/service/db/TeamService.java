@@ -138,6 +138,6 @@ public class TeamService {
     ) {
         // TODO: implementar filtro real (leagueId/categoryCode/gender) con tus tablas
         // por ahora se regresa todo para mantener el comportamiento actual
-        return equiposRepository.findAll();
+    	 return equiposRepository.findActiveTeamsFiltered(leagueId, categoryCode, gender);
     }
 }
