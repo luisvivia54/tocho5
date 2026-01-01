@@ -83,5 +83,8 @@ public interface EquiposRepository extends JpaRepository<EquiposModel, Long> {
             @Param("code") String code,
             @Param("gender") String gender
     );
+    
+    int countByCaptainAndIsActiveTrue(AppUser captain);
+    List<EquiposModel> findByCaptainAndIsActiveTrue(AppUser captain);
 
 }

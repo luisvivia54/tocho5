@@ -115,12 +115,15 @@ public class Controller {
         String code = normalizeFilterParam(categoryCode);
         String gen = normalizeFilterParam(gender);
 
+        // ✅ sin filtros => SOLO ACTIVOS
         if (leagueId == null && code == null && gen == null) {
-            return repository.findAll();
+            return repository.findByIsActiveTrueOrderByNameAsc();
         }
 
+        // ✅ con filtros => tu servicio ya usa findActiveTeamsFiltered (solo activos)
         return teamService.findTeamsFiltered(leagueId, code, gen);
     }
+
 
     /**
      * ✅ MÉTODO A: GET /api/teams/list  (PARA FRONT)
@@ -301,8 +304,10 @@ public class Controller {
     public MyTeamSummary getMyTeam(@AuthenticationPrincipal Jwt jwt) {
         AppUser user = userservice.syncFromJwt(jwt);
 
-        List<EquiposModel> teams = repository.findByCaptain(user);
+        // ✅ SOLO equipos activos
+        List<EquiposModel> teams = repository.findByCaptainAndIsActiveTrue(user);
         int currentTeams = teams.size();
+
         boolean hasCaptainPrivileges = user.hasCaptainPrivileges();
         boolean canCreateTeam = hasCaptainPrivileges && currentTeams < user.getMaxTeamsAllowed();
 
@@ -316,6 +321,7 @@ public class Controller {
                 teams
         );
     }
+
 
     @PostMapping("/teams/mine")
     public EquiposModel createMyTeam(
