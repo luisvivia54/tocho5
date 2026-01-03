@@ -18,14 +18,14 @@ public interface StatPlayerGameRepository extends JpaRepository<StatPlayerGameMo
     	      p.full_name AS fullName,
     	      COALESCE(SUM(spg.td), 0)       AS td,
     	      COALESCE(SUM(spg.pass_td), 0)  AS passTd,
-    	      COALESCE(SUM(spg.intercep), 0) AS interceptions,
+    	      COALESCE(SUM(spg.interceptions), 0) AS interceptions,
     	      COALESCE(SUM(spg.sacks), 0)    AS sacks
     	    FROM public.stat_player_game spg
     	    JOIN public.game g   ON g.game_id = spg.game_id
     	    JOIN public.player p ON p.player_id = spg.player_id
     	    WHERE g.season_id = :seasonId
     	    GROUP BY p.player_id, p.full_name
-    	    ORDER BY td DESC, passTd DESC, interceptions DESC, sacks DESC
+			    ORDER BY td DESC, passTd DESC, interceptions DESC, sacks DESC
     	""", nativeQuery = true)
     	List<PlayerSeasonStatsProjection> leaderboardBySeason(@Param("seasonId") Long seasonId);
 
