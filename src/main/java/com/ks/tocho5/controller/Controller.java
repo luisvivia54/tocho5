@@ -12,25 +12,19 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
 
-import com.ks.tocho5.model.EquiposStatsDTO;
-import com.ks.tocho5.model.GameModel;
-import com.ks.tocho5.model.GameStatusModel;
-import com.ks.tocho5.model.PlayerModel;
-import com.ks.tocho5.model.PointsRowProjection;
-import com.ks.tocho5.model.SetTeamActiveRequestDTO;
-import com.ks.tocho5.model.StandingTeamModel;
-import com.ks.tocho5.model.TeamStatsFilterDTO;
-import com.ks.tocho5.model.AppUser;
-import com.ks.tocho5.model.EquiposModel;
+import com.ks.tocho5.model.*;
 import com.ks.tocho5.model.TeamDetailDTOs.TeamDetailDTO;
-import com.ks.tocho5.model.TeamPhotoModel;
 
 import com.ks.tocho5.model.CategoryDto;
 import com.ks.tocho5.model.TeamListProjection;
+
+import com.ks.tocho5.model.PlayerGameStatsUpsertDTO;
+import com.ks.tocho5.model.PlayerSeasonStatsDTO;
 
 import com.ks.tocho5.repository.EquiposRepository;
 import com.ks.tocho5.repository.JuegoStatus;
@@ -38,14 +32,15 @@ import com.ks.tocho5.repository.JuegosRepository;
 import com.ks.tocho5.repository.StandingTeamRepository;
 
 import com.ks.tocho5.service.db.AppUserService;
+import com.ks.tocho5.service.db.CategoryService;
 import com.ks.tocho5.service.db.EquipoStatsService;
 import com.ks.tocho5.service.db.GameService;
-import com.ks.tocho5.service.db.TeamService;
 import com.ks.tocho5.service.db.PlayerService;
 import com.ks.tocho5.service.db.R2StorageService;
-import com.ks.tocho5.service.db.TeamDetailService;
 import com.ks.tocho5.service.db.TeamCarouselService;
-import com.ks.tocho5.service.db.CategoryService;
+import com.ks.tocho5.service.db.TeamDetailService;
+import com.ks.tocho5.service.db.TeamService;
+import com.ks.tocho5.service.db.PlayerStatsService;
 
 @RestController
 @RequestMapping("/api")
@@ -64,8 +59,9 @@ public class Controller {
     private final TeamCarouselService teamCarouselService;
     private final CategoryService categoryService;
     private final JuegosRepository juegosrepo;
+    private final PlayerStatsService playerStatsService;
+
     private final ObjectMapper objectMapper;
-    
 
     public Controller(
             EquiposRepository repository,
@@ -81,30 +77,32 @@ public class Controller {
             TeamDetailService teamDetailService,
             TeamCarouselService teamCarouselService,
             CategoryService categoryService,
+            PlayerStatsService playerStatsService,
             ObjectMapper objectMapper
     ) {
-    	this.juegosrepo = juegosrepo;
         this.repository = repository;
         this.service = service;
+        this.userservice = userservice;
         this.gameservice = gameservice;
         this.juegostat = juegostat;
+        this.juegosrepo = juegosrepo;
         this.standingrepo = standingrepo;
-        this.userservice = userservice;
         this.teamService = teamService;
         this.r2StorageService = r2StorageService;
         this.playerService = playerService;
         this.teamDetailService = teamDetailService;
         this.teamCarouselService = teamCarouselService;
         this.categoryService = categoryService;
+        this.playerStatsService = playerStatsService;
         this.objectMapper = objectMapper;
     }
 
-    // ================= EQUIPOS / PARTIDOS / TABLA =================
+    // ================= EQUIPOS =================
 
     /**
-     * ✅ GET /api/teams  (NO SE ROMPE)
-     * - Sin parámetros -> todos los equipos (como antes).
-     * - Con leagueId / categoryCode / gender -> filtrado (lo que ya tenías).
+     * ✅ GET /api/teams
+     * - Sin filtros => SOLO ACTIVOS
+     * - Con filtros => SOLO ACTIVOS (via TeamService.findTeamsFiltered)
      */
     @GetMapping("/teams")
     public List<EquiposModel> findAllTeams(
@@ -113,27 +111,18 @@ public class Controller {
             @RequestParam(name = "gender", required = false) String gender
     ) {
         String code = normalizeFilterParam(categoryCode);
-        String gen = normalizeFilterParam(gender);
+        String gen  = normalizeFilterParam(gender);
 
-        // ✅ sin filtros => SOLO ACTIVOS
         if (leagueId == null && code == null && gen == null) {
             return repository.findByIsActiveTrueOrderByNameAsc();
         }
 
-        // ✅ con filtros => tu servicio ya usa findActiveTeamsFiltered (solo activos)
         return teamService.findTeamsFiltered(leagueId, code, gen);
     }
 
-
     /**
-     * ✅ MÉTODO A: GET /api/teams/list  (PARA FRONT)
-     * - Regresa teams + season/category de la inscripción más reciente + category(code/gender)
-     * - Aquí sí puedes filtrar por:
-     *   - rama -> categoryCode
-     *   - categoría -> gender
-     *
-     * Ejemplo:
-     * /api/teams/list?leagueId=1&categoryCode=U16&gender=F
+     * ✅ GET /api/teams/list  (PARA FRONT)
+     * ya filtra activos en tu query native (t.is_active=true)
      */
     @GetMapping("/teams/list")
     public List<TeamListProjection> listTeamsWithEnrollment(
@@ -142,39 +131,35 @@ public class Controller {
             @RequestParam(name = "gender", required = false) String gender
     ) {
         String code = normalizeFilterParam(categoryCode);
-        String gen = normalizeFilterParam(gender);
+        String gen  = normalizeFilterParam(gender);
         return repository.findTeamsList(leagueId, code, gen);
     }
 
-    /**
-     * GET /api/games
-     */
+    // ================= PARTIDOS =================
+
     @GetMapping("/games")
     public List<GameStatusModel> findAllGames(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
-            @RequestParam(name = "code", required = false) String code,          // <-- code = category.code (rama)
-            @RequestParam(name = "gender", required = false) String gender,      // <-- gender = category.gender (categoria)
-            @RequestParam(name = "roundLabel", required = false) String roundLabel // <-- jornada (round_label)
+            @RequestParam(name = "code", required = false) String code,
+            @RequestParam(name = "gender", required = false) String gender,
+            @RequestParam(name = "roundLabel", required = false) String roundLabel
     ) {
         String c = normalizeFilterParam(code);
         String g = normalizeFilterParam(gender);
         String r = normalizeFilterParam(roundLabel);
 
-        // si no mandan filtros -> scheduled normal
         if (leagueId == null && c == null && g == null && r == null) {
             return juegostat.findAllScheduledWithTeams();
         }
-
-        // scheduled con filtros
-        return juegostat.findScheduledWithTeamsFiltered( c, g, r);
+        return juegostat.findScheduledWithTeamsFiltered(c, g, r);
     }
 
     @GetMapping("/gamesFinal")
     public List<GameStatusModel> findAllFinalGames(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
-            @RequestParam(name = "code", required = false) String code,              // category.code (rama)
-            @RequestParam(name = "gender", required = false) String gender,          // category.gender (categoria)
-            @RequestParam(name = "roundLabel", required = false) String roundLabel,  // jornada
+            @RequestParam(name = "code", required = false) String code,
+            @RequestParam(name = "gender", required = false) String gender,
+            @RequestParam(name = "roundLabel", required = false) String roundLabel,
             @RequestParam(name = "size", required = false, defaultValue = "500") int size,
             @RequestParam(name = "all", required = false, defaultValue = "false") boolean all
     ) {
@@ -184,14 +169,12 @@ public class Controller {
 
         boolean hasFilters = (leagueId != null || c != null || g != null || r != null);
 
-        // ✅ Si piden all=true o vienen filtros => NO limitamos
         List<GameStatusModel> finals = (all || hasFilters)
-        		? juegostat.findFinalWithTeamsFiltered(c, g, r) // <-- sin pageable
-                : juegostat.findFinalWithTeams("FINAL", PageRequest.of(0, size));    // <-- home: últimos N
+                ? juegostat.findFinalWithTeamsFiltered(c, g, r)
+                : juegostat.findFinalWithTeams("FINAL", PageRequest.of(0, size));
 
         if (finals == null || finals.isEmpty()) return finals;
 
-        // ========== INYECTAR MARCADOR (game_score) ==========
         List<Integer> gameIds = finals.stream()
                 .map(GameStatusModel::getGame_id)
                 .filter(java.util.Objects::nonNull)
@@ -218,9 +201,8 @@ public class Controller {
         return finals;
     }
 
-    /**
-     * GET /api/points
-     */
+    // ================= TABLA (POINTS) =================
+
     @GetMapping("/points")
     public List<PointsRowProjection> findTablePoints(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
@@ -228,8 +210,7 @@ public class Controller {
             @RequestParam(name = "gender", required = false) String gender
     ) {
         String code = normalizeFilterParam(categoryCode);
-        String gen = normalizeFilterParam(gender);
-
+        String gen  = normalizeFilterParam(gender);
         return standingrepo.findPointsList(leagueId, code, gen);
     }
 
@@ -238,7 +219,7 @@ public class Controller {
         return ResponseEntity.ok(service.search(f));
     }
 
-    // ================= USUARIO (KEYCLOAK -> app_user) =================
+    // ================= USUARIO =================
 
     @GetMapping("/me")
     public String me(@AuthenticationPrincipal Jwt jwt) {
@@ -251,7 +232,6 @@ public class Controller {
     @PostMapping("/partido/update")
     public Object partidoupdate(@RequestBody JsonNode body) {
         try {
-            // Si mandas ARRAY => batch
             if (body.isArray()) {
                 List<GameModel> batch = objectMapper.convertValue(
                         body,
@@ -260,7 +240,6 @@ public class Controller {
                 return gameservice.saveGames(batch);
             }
 
-            // Si mandas OBJETO => como antes
             GameModel datosEntrada = objectMapper.convertValue(body, GameModel.class);
             String respSave = gameservice.saveGame(datosEntrada);
             if ("OK".equals(respSave)) return respSave;
@@ -272,7 +251,35 @@ public class Controller {
         }
     }
 
-    // ================= LÓGICA DE CAPITÁN / MI EQUIPO =================
+    // ================== ✅ NUEVO: STATS POR PARTIDO (UPSERT) ==================
+
+    /**
+     * PUT /api/games/{gameId}/player-stats
+     * Body: [{ playerId, teamId, td, passTd, intercep, sacks }, ...]
+     */
+    @PutMapping("/games/{gameId}/player-stats")
+    public ResponseEntity<Void> upsertPlayerGameStats(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long gameId,
+            @RequestBody List<PlayerGameStatsUpsertDTO> body
+    ) {
+        playerStatsService.upsertStatsForGame(jwt, gameId, body);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * GET /api/stats/players?leagueId=1&seasonId=3
+     * - seasonId opcional -> si no viene, usa temporada activa de esa liga
+     */
+    @GetMapping("/stats/players")
+    public List<PlayerSeasonStatsDTO> getPlayerSeasonStats(
+            @RequestParam(name = "leagueId") Long leagueId,
+            @RequestParam(name = "seasonId", required = false) Long seasonId
+    ) {
+        return playerStatsService.getLeaderboard(leagueId, seasonId);
+    }
+
+    // ================= MI EQUIPO =================
 
     public record CreateTeamRequest(
             String name,
@@ -304,7 +311,7 @@ public class Controller {
     public MyTeamSummary getMyTeam(@AuthenticationPrincipal Jwt jwt) {
         AppUser user = userservice.syncFromJwt(jwt);
 
-        // ✅ SOLO equipos activos
+        // ✅ SOLO ACTIVOS (para que ya no se vean “eliminados”)
         List<EquiposModel> teams = repository.findByCaptainAndIsActiveTrue(user);
         int currentTeams = teams.size();
 
@@ -322,7 +329,6 @@ public class Controller {
         );
     }
 
-
     @PostMapping("/teams/mine")
     public EquiposModel createMyTeam(
             @AuthenticationPrincipal Jwt jwt,
@@ -330,14 +336,14 @@ public class Controller {
     ) {
         return teamService.createTeamForCurrentUser(jwt, request);
     }
-    
+
     @GetMapping("/teams/{teamId}")
     public ResponseEntity<EquiposModel> getTeamById(@PathVariable Integer teamId) {
-    	return repository.findById(teamId.longValue())
-    	        .map(ResponseEntity::ok)
-    	        .orElse(ResponseEntity.notFound().build());
+        return repository.findById(teamId.longValue())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
-    
+
     @PutMapping("/teams/{teamId}")
     public EquiposModel updateMyTeam(
             @AuthenticationPrincipal Jwt jwt,
@@ -347,11 +353,7 @@ public class Controller {
         return teamService.updateTeamForCurrentUser(jwt, teamId.longValue(), request);
     }
 
-
-
-    // ================= LOGO DEL EQUIPO =================
-
-    public record TeamLogoResponse(Long teamId, String logoUrl) {}
+    // ================= LOGO =================
 
     @PostMapping("/teams/{teamId}/logo")
     public String uploadTeamLogo(
@@ -371,14 +373,13 @@ public class Controller {
         }
 
         String logoUrl = r2StorageService.uploadTeamLogo(teamId.longValue(), logoFile);
-
         team.setLogoUrl(logoUrl);
         repository.save(team);
 
         return "logo";
     }
 
-    // ================ JUGADORES ===================
+    // ================= JUGADORES =================
 
     @GetMapping("/teams/{teamId}/players")
     public List<PlayerModel> getPlayersByTeam(@PathVariable Integer teamId) {
@@ -443,7 +444,7 @@ public class Controller {
         return ResponseEntity.noContent().build();
     }
 
-    // =============== CARRUSEL DE FOTOS DEL EQUIPO =================
+    // ================= FOTOS CARRUSEL =================
 
     @GetMapping("/teams/{teamId}/photos")
     public List<TeamPhotoModel> listTeamPhotos(@PathVariable Integer teamId) {
@@ -457,7 +458,6 @@ public class Controller {
             @RequestParam("photo") MultipartFile photo,
             @RequestParam(value = "positionIndex", required = false) Integer positionIndex
     ) throws IOException {
-
         return teamCarouselService.addPhoto(jwt, teamId.longValue(), photo, positionIndex);
     }
 
@@ -469,7 +469,6 @@ public class Controller {
             @RequestParam("photo") MultipartFile photo,
             @RequestParam(value = "positionIndex", required = false) Integer positionIndex
     ) throws IOException {
-
         return teamCarouselService.updatePhoto(jwt, teamId.longValue(), photoId, photo, positionIndex);
     }
 
@@ -479,19 +478,18 @@ public class Controller {
             @PathVariable Integer teamId,
             @PathVariable Long photoId
     ) throws IOException {
-
         teamCarouselService.deletePhoto(jwt, teamId.longValue(), photoId);
         return ResponseEntity.noContent().build();
     }
 
-    // =============== DETALLE PÚBLICO DE EQUIPO =================
+    // ================= DETALLE PÚBLICO =================
 
     @GetMapping("/teams/{teamId}/detail")
     public TeamDetailDTO getTeamDetail(@PathVariable Integer teamId) {
         return teamDetailService.getTeamDetail(teamId.longValue());
     }
 
-    // =============== CATEGORÍAS (para filtros del front) =================
+    // ================= CATEGORÍAS =================
 
     @GetMapping("/categories")
     public List<CategoryDto> listCategories(
@@ -501,19 +499,8 @@ public class Controller {
         return categoryService.getCategories(leagueId, gender);
     }
 
-    // =============== HELPERS PRIVADOS =================
+    // ================= ACTIVAR / DESACTIVAR (ELIMINAR LÓGICO) =================
 
-    /**
-     * Normaliza parámetros de filtro:
-     * - null, "", "   ", "all" -> null
-     * - otro valor -> TRIM + UPPER (para que matchee con UPPER(...) en SQL)
-     */
-    private String normalizeFilterParam(String value) {
-        if (value == null) return null;
-        String v = value.trim();
-        if (v.isEmpty() || "all".equalsIgnoreCase(v)) return null;
-        return v.toUpperCase();
-    }
     @PatchMapping("/teams/{teamId}/active")
     public ResponseEntity<EquiposModel> setTeamActive(
             @AuthenticationPrincipal Jwt jwt,
@@ -526,5 +513,14 @@ public class Controller {
 
         EquiposModel updated = teamService.setTeamActive(jwt, teamId, req.getIsActive());
         return ResponseEntity.ok(updated);
+    }
+
+    // ================= HELPERS =================
+
+    private String normalizeFilterParam(String value) {
+        if (value == null) return null;
+        String v = value.trim();
+        if (v.isEmpty() || "all".equalsIgnoreCase(v)) return null;
+        return v.toUpperCase();
     }
 }
