@@ -5,37 +5,41 @@ import java.util.*;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
 import org.springframework.http.HttpMethod;
 
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.web.SecurityFilterChain;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.SecurityFilterChain;
+
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsSource) throws Exception {
 
         http
-            .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(corsSource)) // ✅ fuerza tu CORS config
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
             .authorizeHttpRequests(auth -> auth
 
-                // ✅ ADMIN (solo rol admin)
-                .requestMatchers("/api/admin/**").hasRole("admin")
+                // ✅ Preflight SIEMPRE permitido
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ✅ Públicos
+                // ✅ Públicos (GET)
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/teams",
@@ -47,7 +51,7 @@ public class SecurityConfig {
                     "/api/stats/players"
                 ).permitAll()
 
-                // ✅ Públicos con path variable (usar * en lugar de {teamId})
+                // ✅ Públicos con path variable
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/teams/*/detail",
@@ -55,11 +59,11 @@ public class SecurityConfig {
                     "/api/teams/*/photos"
                 ).permitAll()
 
-                // ✅ Preflight
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // ✅ ADMIN (Keycloak realm role: admin)
+                .requestMatchers("/api/admin/**").hasRole("admin")
 
                 // ✅ Todo lo demás requiere token
-                .anyRequest().permitAll() //authenticated()
+                .anyRequest().permitAll()//authenticated()
             )
 
             .oauth2ResourceServer(oauth2 -> oauth2
