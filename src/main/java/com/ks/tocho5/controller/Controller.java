@@ -1,9 +1,11 @@
+// src/main/java/com/ks/tocho5/controller/Controller.java
 package com.ks.tocho5.controller;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +44,11 @@ import com.ks.tocho5.service.db.TeamDetailService;
 import com.ks.tocho5.service.db.TeamService;
 import com.ks.tocho5.service.db.PlayerStatsService;
 
+// ✅ nuevo (admin users)
+import com.ks.tocho5.service.db.AdminUserService;
+import com.ks.tocho5.model.admin.AdminUserPatchRequest;
+import com.ks.tocho5.model.admin.AdminUserRowDTO;
+
 @RestController
 @RequestMapping("/api")
 public class Controller {
@@ -61,6 +68,9 @@ public class Controller {
     private final JuegosRepository juegosrepo;
     private final PlayerStatsService playerStatsService;
 
+    // ✅ nuevo
+    private final AdminUserService adminUserService;
+
     private final ObjectMapper objectMapper;
 
     public Controller(
@@ -78,6 +88,8 @@ public class Controller {
             TeamCarouselService teamCarouselService,
             CategoryService categoryService,
             PlayerStatsService playerStatsService,
+            // ✅ nuevo
+            AdminUserService adminUserService,
             ObjectMapper objectMapper
     ) {
         this.repository = repository;
@@ -94,16 +106,14 @@ public class Controller {
         this.teamCarouselService = teamCarouselService;
         this.categoryService = categoryService;
         this.playerStatsService = playerStatsService;
+
+        this.adminUserService = adminUserService;
+
         this.objectMapper = objectMapper;
     }
 
     // ================= EQUIPOS =================
 
-    /**
-     * ✅ GET /api/teams
-     * - Sin filtros => SOLO ACTIVOS
-     * - Con filtros => SOLO ACTIVOS (via TeamService.findTeamsFiltered)
-     */
     @GetMapping("/teams")
     public List<EquiposModel> findAllTeams(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
@@ -120,10 +130,6 @@ public class Controller {
         return teamService.findTeamsFiltered(leagueId, code, gen);
     }
 
-    /**
-     * ✅ GET /api/teams/list  (PARA FRONT)
-     * ya filtra activos en tu query native (t.is_active=true)
-     */
     @GetMapping("/teams/list")
     public List<TeamListProjection> listTeamsWithEnrollment(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
@@ -227,6 +233,33 @@ public class Controller {
         return "Hola " + user.getFullName() + " (id interno=" + user.getId() + ")";
     }
 
+    // ================= ADMIN / USERS =================
+    // GET /api/admin/users?q=&role=&active=&page=&size=&sort=
+    // sort: createdDesc | createdAsc | nameAsc | teamsDesc
+    @GetMapping("/admin/users")
+    @PreAuthorize("hasRole('admin')")
+    public Page<AdminUserRowDTO> adminListUsers(
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "role", required = false) String role,
+            @RequestParam(name = "active", required = false) Boolean active,
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "25") int size,
+            @RequestParam(name = "sort", required = false, defaultValue = "createdDesc") String sort
+    ) {
+        return adminUserService.list(q, role, active, page, size, sort);
+    }
+
+    // PATCH /api/admin/users/{id}
+    // body: { "role": "USER"|"CAPTAIN", "maxTeamsAllowed": 0..99, "isActive": true|false }
+    @PatchMapping("/admin/users/{id}")
+    @PreAuthorize("hasRole('admin')")
+    public AdminUserRowDTO adminPatchUser(
+            @PathVariable Long id,
+            @RequestBody AdminUserPatchRequest req
+    ) {
+        return adminUserService.patch(id, req);
+    }
+
     // ================= ACTUALIZAR PARTIDO =================
 
     @PostMapping("/partido/update")
@@ -251,12 +284,8 @@ public class Controller {
         }
     }
 
-    // ================== ✅ NUEVO: STATS POR PARTIDO (UPSERT) ==================
+    // ================== ✅ STATS POR PARTIDO (UPSERT) ==================
 
-    /**
-     * PUT /api/games/{gameId}/player-stats
-     * Body: [{ playerId, teamId, td, passTd, intercep, sacks }, ...]
-     */
     @PutMapping("/games/{gameId}/player-stats")
     public ResponseEntity<Void> upsertPlayerGameStats(
             @AuthenticationPrincipal Jwt jwt,
@@ -267,10 +296,6 @@ public class Controller {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * GET /api/stats/players?leagueId=1&seasonId=3
-     * - seasonId opcional -> si no viene, usa temporada activa de esa liga
-     */
     @GetMapping("/stats/players")
     public List<PlayerSeasonStatsDTO> getPlayerSeasonStats(
             @RequestParam(name = "leagueId") Long leagueId,
@@ -311,7 +336,6 @@ public class Controller {
     public MyTeamSummary getMyTeam(@AuthenticationPrincipal Jwt jwt) {
         AppUser user = userservice.syncFromJwt(jwt);
 
-        // ✅ SOLO ACTIVOS (para que ya no se vean “eliminados”)
         List<EquiposModel> teams = repository.findByCaptainAndIsActiveTrue(user);
         int currentTeams = teams.size();
 
