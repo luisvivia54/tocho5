@@ -10,8 +10,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 
 import org.springframework.security.core.GrantedAuthority;
@@ -20,85 +18,81 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import org.springframework.web.cors.CorsConfigurationSource;
-
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsSource) throws Exception {
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http
-            .csrf(AbstractHttpConfigurer::disable)
-            .cors(cors -> cors.configurationSource(corsSource)) // ✅ fuerza tu CORS config
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+    http
+      .cors(Customizer.withDefaults())   // ✅ usa el CORS de WebMvcConfigurer
+      .csrf(AbstractHttpConfigurer::disable)
 
-            .authorizeHttpRequests(auth -> auth
+      .authorizeHttpRequests(auth -> auth
 
-                // ✅ Preflight SIEMPRE permitido
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+        // ✅ Preflight
+        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // ✅ Públicos (GET)
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/teams",
-                    "/api/teams/list",
-                    "/api/games",
-                    "/api/gamesFinal",
-                    "/api/points",
-                    "/api/categories",
-                    "/api/stats/players"
-                ).permitAll()
+        // ✅ ADMIN
+        .requestMatchers("/api/admin/**").hasRole("admin")
 
-                // ✅ Públicos con path variable
-                .requestMatchers(
-                    HttpMethod.GET,
-                    "/api/teams/*/detail",
-                    "/api/teams/*/players",
-                    "/api/teams/*/photos"
-                ).permitAll()
+        // ✅ Públicos
+        .requestMatchers(
+          HttpMethod.GET,
+          "/api/teams",
+          "/api/teams/list",
+          "/api/games",
+          "/api/gamesFinal",
+          "/api/points",
+          "/api/categories",
+          "/api/stats/players"
+        ).permitAll()
 
-                // ✅ ADMIN (Keycloak realm role: admin)
-                .requestMatchers("/api/admin/**").hasRole("admin")
+        // ✅ Públicos con path variable
+        .requestMatchers(
+          HttpMethod.GET,
+          "/api/teams/*/detail",
+          "/api/teams/*/players",
+          "/api/teams/*/photos"
+        ).permitAll()
 
-                // ✅ Todo lo demás requiere token
-                .anyRequest().permitAll()//authenticated()
-            )
+        // ✅ Todo lo demás requiere token
+        .anyRequest().authenticated()
+      )
 
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
-            );
+      .oauth2ResourceServer(oauth2 -> oauth2
+        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+      );
 
-        return http.build();
-    }
+    return http.build();
+  }
 
-    /**
-     * Keycloak realm_access.roles -> ROLE_admin / ROLE_captain / ROLE_user
-     */
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter conv = new JwtAuthenticationConverter();
+  /**
+   * Keycloak realm_access.roles -> ROLE_admin / ROLE_captain / ROLE_user
+   */
+  @Bean
+  public JwtAuthenticationConverter jwtAuthenticationConverter() {
+    JwtAuthenticationConverter conv = new JwtAuthenticationConverter();
 
-        conv.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Collection<GrantedAuthority> authorities = new ArrayList<>();
+    conv.setJwtGrantedAuthoritiesConverter(jwt -> {
+      Collection<GrantedAuthority> authorities = new ArrayList<>();
 
-            Map<String, Object> realmAccess = jwt.getClaim("realm_access");
-            if (realmAccess != null) {
-                Object rolesObj = realmAccess.get("roles");
-                if (rolesObj instanceof Collection<?> roles) {
-                    for (Object r : roles) {
-                        if (r == null) continue;
-                        String role = r.toString().toLowerCase(Locale.ROOT).trim();
-                        if (role.isEmpty()) continue;
-                        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
-                    }
-                }
-            }
+      Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+      if (realmAccess != null) {
+        Object rolesObj = realmAccess.get("roles");
+        if (rolesObj instanceof Collection<?> roles) {
+          for (Object r : roles) {
+            if (r == null) continue;
+            String role = r.toString().toLowerCase(Locale.ROOT).trim();
+            if (role.isEmpty()) continue;
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+          }
+        }
+      }
+      return authorities;
+    });
 
-            return authorities;
-        });
-
-        return conv;
-    }
+    return conv;
+  }
 }
