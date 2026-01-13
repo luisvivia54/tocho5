@@ -15,7 +15,7 @@ public class SeasonModel {
 	@Column(name = "league_id")
 	private Integer league_id;
 	
-	@Column(name = "league_id")
+	@Column(name = "name")
 	private String name;
 
 	/**
