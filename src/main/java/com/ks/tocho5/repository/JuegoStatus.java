@@ -51,6 +51,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
+       join fetch g.season s
       where upper(g.status) = 'SCHEDULED'
       order by g.match_date_utc asc
   """)

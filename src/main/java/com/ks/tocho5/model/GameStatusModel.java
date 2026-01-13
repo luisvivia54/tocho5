@@ -20,8 +20,9 @@ public class GameStatusModel {
   @Column(name = "game_id")
   private Integer game_id;
 
-  @Column(name = "season_id")
-  private Integer season_id;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "season_id")   // <- esta es la columna en la tabla game
+  private SeasonModel season;   
 
   @Column(name = "category_id")
   private Integer category_id;
@@ -87,12 +88,12 @@ public class GameStatusModel {
     this.game_id = game_id;
   }
 
-  public Integer getSeason_id() {
-    return season_id;
+  public SeasonModel getSeason() {
+    return season;
   }
 
-  public void setSeason_id(Integer season_id) {
-    this.season_id = season_id;
+  public void setSeason(SeasonModel season) {
+    this.season = season;
   }
 
   public Integer getCategory_id() {
@@ -211,7 +212,7 @@ public class GameStatusModel {
   @Override
   public String toString() {
     return "GameStatusModel [game_id=" + game_id
-        + ", season_id=" + season_id
+        + ", season_id=" + season
         + ", category_id=" + category_id
         + ", home_team_id=" + home_team_id
         + ", away_team_id=" + away_team_id
