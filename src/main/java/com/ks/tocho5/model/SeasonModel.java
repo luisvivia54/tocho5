@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 @Table(name = "season")
 public class SeasonModel {
 	
+	@Id
 	@Column(name = "season_id")
 	private Integer season_id;
 	
