@@ -3,6 +3,8 @@ package com.ks.tocho5.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -20,6 +22,7 @@ public class GameStatusModel {
   @Column(name = "game_id")
   private Integer game_id;
 
+  @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "season_id")   // <- esta es la columna en la tabla game
   private SeasonModel season;   
