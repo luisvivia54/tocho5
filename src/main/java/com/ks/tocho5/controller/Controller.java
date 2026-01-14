@@ -14,6 +14,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import com.ks.tocho5.service.db.SeasonService;
+import com.ks.tocho5.model.SeasonLiteDto;
+
+import java.util.Map;
+
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -58,6 +63,7 @@ public class Controller {
     private final GameService gameservice;
     private final JuegoStatus juegostat;
     private final StandingTeamRepository standingrepo;
+    private final SeasonService seasonService;
     private final AppUserService userservice;
     private final TeamService teamService;
     private final R2StorageService r2StorageService;
@@ -90,9 +96,12 @@ public class Controller {
             PlayerStatsService playerStatsService,
             // ✅ nuevo
             AdminUserService adminUserService,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            SeasonService seasonService
+
     ) {
         this.repository = repository;
+        this.seasonService = seasonService;
         this.service = service;
         this.userservice = userservice;
         this.gameservice = gameservice;
@@ -547,4 +556,41 @@ public class Controller {
         if (v.isEmpty() || "all".equalsIgnoreCase(v)) return null;
         return v.toUpperCase();
     }
+ // ================= TEMPORADAS =================
+
+    /**
+     * GET /api/seasons?leagueId=1
+     * Regresa lista ligera: [{id, name}]
+     */
+    @GetMapping("/seasons")
+    public List<SeasonLiteDto> listSeasons(
+            @RequestParam(name = "leagueId", required = false) Long leagueId
+    ) {
+        // Si tu repo/service ya filtra por leagueId, úsalo aquí.
+        // Si NO tienes liga en season, puedes ignorar leagueId.
+        return seasonService.listLite(leagueId);
+    }
+
+    /**
+     * Alias por si el front usa /seasons/list
+     */
+    @GetMapping("/seasons/list")
+    public List<SeasonLiteDto> listSeasonsAlias(
+            @RequestParam(name = "leagueId", required = false) Long leagueId
+    ) {
+        return seasonService.listLite(leagueId);
+    }
+
+    /**
+     * GET /api/seasons/current?leagueId=1
+     * Regresa { "seasonId": 123 }
+     */
+    @GetMapping("/seasons/current")
+    public Map<String, Long> getCurrentSeason(
+            @RequestParam(name = "leagueId") Long leagueId
+    ) {
+        Long seasonId = seasonService.getCurrentSeasonId(leagueId);
+        return Map.of("seasonId", seasonId);
+    }
+
 }
