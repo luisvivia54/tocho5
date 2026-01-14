@@ -69,21 +69,24 @@ public class SeasonService {
             nameExpr = "'Temporada ' || s.season_id::text";
         }
 
+        // ✅ FIX: ya NO usamos "(? IS NULL OR ...)" porque Postgres no infiere el tipo cuando llega NULL
+        // Usamos COALESCE con CAST explícito
         String sql = """
             SELECT
               s.season_id AS id,
               %s AS name
             FROM public.season s
-            WHERE (? IS NULL OR s.league_id = ?)
+            WHERE s.league_id = COALESCE(?::bigint, s.league_id)
             ORDER BY s.is_active DESC NULLS LAST, s.season_id DESC
         """.formatted(nameExpr);
 
-        return jdbc.query(sql, (rs, i) ->
-            new SeasonLiteDto(
+        return jdbc.query(
+            sql,
+            (rs, i) -> new SeasonLiteDto(
                 rs.getLong("id"),
                 rs.getString("name")
             ),
-            leagueId, leagueId
+            leagueId
         );
     }
 }
