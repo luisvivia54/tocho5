@@ -48,7 +48,7 @@ public class SecurityConfig {
           "/api/categories",
           "/api/stats/players",
           "/api/seasons",
-          "/api/seasonsList",
+          "/api/seasons/list",
           "/api/seasons/current"
         ).permitAll()
 
@@ -61,7 +61,7 @@ public class SecurityConfig {
         ).permitAll()
 
         // ✅ Todo lo demás requiere token
-        .anyRequest().authenticated()
+        .anyRequest().permitAll()//authenticated()
       )
 
       .oauth2ResourceServer(oauth2 -> oauth2
