@@ -12,7 +12,7 @@ public class SeasonModel {
 	
 	@Id
 	@Column(name = "season_id")
-	private Integer season_id;
+	private Long season_id;
 	
 	@Column(name = "league_id")
 	private Long leagueId;
@@ -23,14 +23,14 @@ public class SeasonModel {
 	/**
 	 * @return the season_id
 	 */
-	public Integer getSeason_id() {
+	public Long getSeason_id() {
 		return season_id;
 	}
 
 	/**
 	 * @param season_id the season_id to set
 	 */
-	public void setSeason_id(Integer season_id) {
+	public void setSeason_id(Long season_id) {
 		this.season_id = season_id;
 	}
 
