@@ -12,7 +12,7 @@ public class SeasonModel {
 	
 	@Id
 	@Column(name = "season_id")
-	private Long season_id;
+	private Long seasonId;
 	
 	@Column(name = "league_id")
 	private Long leagueId;
@@ -23,15 +23,15 @@ public class SeasonModel {
 	/**
 	 * @return the season_id
 	 */
-	public Long getSeason_id() {
-		return season_id;
+	public Long getSeasonId() {
+		return seasonId;
 	}
 
 	/**
 	 * @param season_id the season_id to set
 	 */
-	public void setSeason_id(Long season_id) {
-		this.season_id = season_id;
+	public void setSeasonId(Long seasonId) {
+		this.seasonId = seasonId;
 	}
 
 	/**
@@ -64,7 +64,7 @@ public class SeasonModel {
 
 	@Override
 	public String toString() {
-		return "SeasonModel [season_id=" + season_id + ", league_id=" + leagueId + ", name=" + name + "]";
+		return "SeasonModel [season_id=" + seasonId + ", league_id=" + leagueId + ", name=" + name + "]";
 	}
 	
 	

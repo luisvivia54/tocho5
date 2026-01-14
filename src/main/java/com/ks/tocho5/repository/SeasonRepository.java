@@ -11,5 +11,5 @@ public interface SeasonRepository extends JpaRepository<SeasonModel, Long> {
 
     // Si tu Season tiene leagueId/seasonId etc, ajusta el nombre del campo.
     // Si NO tienes liga, borra este método y usa findAll().
-	List<SeasonModel> findAllByLeagueIdOrderByIdDesc(Long leagueId);
+	List<SeasonModel> findAllByLeagueIdOrderBySeasonIdDesc(Long leagueId);
 }
