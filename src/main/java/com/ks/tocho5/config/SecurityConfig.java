@@ -46,7 +46,10 @@ public class SecurityConfig {
           "/api/gamesFinal",
           "/api/points",
           "/api/categories",
-          "/api/stats/players"
+          "/api/stats/players",
+          "/api/seasons",
+          "/api/seasonsList",
+          "/api/seasons/current"
         ).permitAll()
 
         // ✅ Públicos con path variable
