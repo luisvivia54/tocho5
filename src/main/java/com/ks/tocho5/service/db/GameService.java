@@ -4,14 +4,29 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
+import com.ks.tocho5.model.dto.GameCreateRequest;
+import com.ks.tocho5.model.GameStatusModel;
+import com.ks.tocho5.model.SeasonModel;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.ks.tocho5.model.GameModel;
+import com.ks.tocho5.model.GameStatusModel;
+import com.ks.tocho5.model.dto.GameCreateRequest;
 import com.ks.tocho5.repository.JuegoStatus;
 import com.ks.tocho5.repository.JuegosRepository;
 import com.ks.tocho5.repository.StandingTeamRepository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 @Service
 public class GameService {
@@ -24,6 +39,9 @@ public class GameService {
 
     @Autowired
     private JuegoStatus juegostatus;
+    
+    @PersistenceContext
+    private EntityManager em;
 
     // ✅ TU MÉTODO ORIGINAL (igual)
     public String saveGame(GameModel gamemodel) {
@@ -100,5 +118,51 @@ public class GameService {
     public static class BatchResult {
         public List<Integer> ok = new ArrayList<>();
         public Map<Integer, String> errors = new LinkedHashMap<>();
+    }
+    public GameStatusModel createScheduledGame(GameCreateRequest req) {
+        if (req == null) throw new IllegalArgumentException("Body vacío");
+
+        // si te mandan id, no es create
+        if (req.gameId() != null) {
+            throw new IllegalArgumentException("Para crear NO mandes game_id. (game_id debe venir null)");
+        }
+
+        if (req.seasonId() == null) throw new IllegalArgumentException("Falta seasonId/season_id");
+        if (req.categoryId() == null || req.categoryId() < 1) throw new IllegalArgumentException("Falta categoryId/category_id");
+        if (req.homeTeamId() == null) throw new IllegalArgumentException("Falta homeTeamId/home_team_id");
+        if (req.awayTeamId() == null) throw new IllegalArgumentException("Falta awayTeamId/away_team_id");
+        if (req.homeTeamId().equals(req.awayTeamId())) throw new IllegalArgumentException("Local y visitante no pueden ser el mismo equipo");
+        if (req.matchDateUtc() == null || req.matchDateUtc().isBlank()) throw new IllegalArgumentException("Falta matchDateUtc/match_date_utc");
+
+        GameStatusModel g = new GameStatusModel();
+
+        // season: referencia sin query (rápido)
+        SeasonModel seasonRef = em.getReference(SeasonModel.class, req.seasonId());
+        g.setSeason(seasonRef);
+
+        g.setCategory_id(req.categoryId());
+        g.setHome_team_id(req.homeTeamId());
+        g.setAway_team_id(req.awayTeamId());
+
+        g.setStatus("SCHEDULED");
+        g.setRoundLabel(req.roundLabel());
+
+        // ✅ parsea "2026-...Z" a LocalDateTime
+        g.setMatch_date_utc(parseToLocalDateTime(req.matchDateUtc()));
+
+        // opcional
+        g.setUpdated_at(LocalDateTime.now());
+
+        return juegostatus.save(g);
+    }
+
+    private LocalDateTime parseToLocalDateTime(String iso) {
+        // acepta 2026-01-24T18:00:00.000Z
+        try {
+            return OffsetDateTime.parse(iso).toLocalDateTime();
+        } catch (DateTimeParseException ignore) {
+            // acepta 2026-01-24T18:00:00
+            return LocalDateTime.parse(iso);
+        }
     }
 }

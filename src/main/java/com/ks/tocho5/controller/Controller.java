@@ -1,6 +1,7 @@
 // src/main/java/com/ks/tocho5/controller/Controller.java
 package com.ks.tocho5.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -10,7 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import java.util.Map;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
@@ -53,6 +54,7 @@ import com.ks.tocho5.service.db.PlayerStatsService;
 import com.ks.tocho5.service.db.AdminUserService;
 import com.ks.tocho5.model.admin.AdminUserPatchRequest;
 import com.ks.tocho5.model.admin.AdminUserRowDTO;
+import com.ks.tocho5.model.dto.GameCreateRequest;
 
 @RestController
 @RequestMapping("/api")
@@ -167,6 +169,15 @@ public class Controller {
             return juegostat.findAllScheduledWithTeams();
         }
         return juegostat.findScheduledWithTeamsFiltered(c, g, r);
+    }
+    @PostMapping("/games")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> createGame(@RequestBody GameCreateRequest req) {
+        GameStatusModel created = gameservice.createScheduledGame(req);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "gameId", created.getGame_id(),
+                "status", created.getStatus()
+        ));
     }
 
     @GetMapping("/gamesFinal")
