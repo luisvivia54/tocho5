@@ -171,7 +171,6 @@ public class Controller {
         return juegostat.findScheduledWithTeamsFiltered(c, g, r);
     }
     @PostMapping("/games")
-    @PreAuthorize("hasRole('admin')")
     public ResponseEntity<?> createGame(@RequestBody GameCreateRequest req) {
         GameStatusModel created = gameservice.createScheduledGame(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
