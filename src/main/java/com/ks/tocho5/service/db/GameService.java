@@ -122,9 +122,10 @@ public class GameService {
     public GameStatusModel createScheduledGame(GameCreateRequest req) {
         if (req == null) throw new IllegalArgumentException("Body vacío");
 
-        // si te mandan id, no es create
-        if (req.gameId() != null) {
-            throw new IllegalArgumentException("Para crear NO mandes game_id. (game_id debe venir null)");
+        // ✅ 0 o null se considera "no mandaron id"
+        Integer incomingId = req.gameId();
+        if (incomingId != null && incomingId > 0) {
+            throw new IllegalArgumentException("Para crear NO mandes game_id (debe venir null/0)");
         }
 
         if (req.seasonId() == null) throw new IllegalArgumentException("Falta seasonId/season_id");
@@ -136,25 +137,20 @@ public class GameService {
 
         GameStatusModel g = new GameStatusModel();
 
-        // season: referencia sin query (rápido)
         SeasonModel seasonRef = em.getReference(SeasonModel.class, req.seasonId());
         g.setSeason(seasonRef);
 
         g.setCategory_id(req.categoryId());
         g.setHome_team_id(req.homeTeamId());
         g.setAway_team_id(req.awayTeamId());
-
         g.setStatus("SCHEDULED");
         g.setRoundLabel(req.roundLabel());
-
-        // ✅ parsea "2026-...Z" a LocalDateTime
         g.setMatch_date_utc(parseToLocalDateTime(req.matchDateUtc()));
-
-        // opcional
         g.setUpdated_at(LocalDateTime.now());
 
         return juegostatus.save(g);
     }
+
 
     private LocalDateTime parseToLocalDateTime(String iso) {
         // acepta 2026-01-24T18:00:00.000Z
