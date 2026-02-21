@@ -17,6 +17,9 @@ import java.time.LocalDate;
 import java.util.List;
 import com.ks.tocho5.service.db.SeasonService;
 import com.ks.tocho5.model.SeasonLiteDto;
+import com.ks.tocho5.service.db.SiteConfigService;
+import com.ks.tocho5.model.dto.SiteConfigResponseDTO;
+import com.ks.tocho5.model.dto.SiteConfigUpsertRequestDTO;
 
 import java.util.Map;
 
@@ -80,9 +83,12 @@ public class Controller {
     private final AdminUserService adminUserService;
 
     private final ObjectMapper objectMapper;
+    
+    private final SiteConfigService siteConfigService;
 
     public Controller(
             EquiposRepository repository,
+            SiteConfigService siteConfigService,
             EquipoStatsService service,
             AppUserService userservice,
             GameService gameservice,
@@ -102,6 +108,7 @@ public class Controller {
             SeasonService seasonService
 
     ) {
+    	this.siteConfigService = siteConfigService;
         this.repository = repository;
         this.seasonService = seasonService;
         this.service = service;
@@ -557,6 +564,21 @@ public class Controller {
         EquiposModel updated = teamService.setTeamActive(jwt, teamId, req.getIsActive());
         return ResponseEntity.ok(updated);
     }
+    
+ // ================= SITE CONFIG (HOME) =================
+
+ // Público: el home consume esto
+ @GetMapping("/site-configs/home")
+ public ResponseEntity<SiteConfigResponseDTO> getHomeConfig() {
+     return ResponseEntity.ok(siteConfigService.getHome());
+ }
+
+ // Solo admin: tu /admin/home.vue guarda aquí
+ @PutMapping("/site-configs/home")
+ @PreAuthorize("hasRole('admin')")
+ public ResponseEntity<SiteConfigResponseDTO> putHomeConfig(@RequestBody SiteConfigUpsertRequestDTO req) {
+     return ResponseEntity.ok(siteConfigService.putHome(req));
+ }
 
     // ================= HELPERS =================
 
