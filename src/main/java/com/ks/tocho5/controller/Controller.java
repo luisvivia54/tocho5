@@ -624,5 +624,11 @@ public class Controller {
         Long seasonId = seasonService.getCurrentSeasonId(leagueId);
         return Map.of("seasonId", seasonId);
     }
+    
+    @DeleteMapping("/games/{gameId}")
+    public ResponseEntity<Void> deleteScheduledGame(@PathVariable Long gameId) {
+        gameservice.deleteScheduledGame(gameId);
+        return ResponseEntity.noContent().build();
+    }
 
 }
