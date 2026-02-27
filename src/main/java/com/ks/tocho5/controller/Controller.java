@@ -575,7 +575,7 @@ public class Controller {
 
  // Solo admin: tu /admin/home.vue guarda aquí
  @PutMapping("/site-configs/home")
- @PreAuthorize("hasRole('admin')")
+ //@PreAuthorize("hasRole('admin')")
  public ResponseEntity<SiteConfigResponseDTO> putHomeConfig(@RequestBody SiteConfigUpsertRequestDTO req) {
      return ResponseEntity.ok(siteConfigService.putHome(req));
  }
