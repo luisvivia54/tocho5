@@ -23,6 +23,11 @@ import com.ks.tocho5.model.dto.SiteConfigUpsertRequestDTO;
 
 import java.util.Map;
 
+import org.springframework.http.MediaType;
+
+//estos dependen de cómo lo nombres en tu proyecto:
+import com.ks.tocho5.service.db.AssetService;
+import com.ks.tocho5.model.dto.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -85,8 +90,11 @@ public class Controller {
     private final ObjectMapper objectMapper;
     
     private final SiteConfigService siteConfigService;
+    
+    private final AssetService assetService;
 
     public Controller(
+    		AssetService assetService,
             EquiposRepository repository,
             SiteConfigService siteConfigService,
             EquipoStatsService service,
@@ -108,6 +116,7 @@ public class Controller {
             SeasonService seasonService
 
     ) {
+    	this.assetService = assetService;
     	this.siteConfigService = siteConfigService;
         this.repository = repository;
         this.seasonService = seasonService;
@@ -128,6 +137,18 @@ public class Controller {
         this.adminUserService = adminUserService;
 
         this.objectMapper = objectMapper;
+    }
+ // ================= ASSETS (R2 + Postgres) =================
+    @PostMapping(value = "/assets/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<AssetDTO> uploadAsset(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam("folder") String folder,
+            @RequestParam("file") MultipartFile file
+    ) throws IOException {
+        String userId = (jwt != null) ? jwt.getSubject() : null;
+        AssetDTO dto = assetService.uploadPublicImage(folder, file, userId);
+        return ResponseEntity.ok(dto);
     }
 
     // ================= EQUIPOS =================
