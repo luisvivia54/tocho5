@@ -5,6 +5,9 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import com.ks.tocho5.model.dto.AssetStatusENUM;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 
 @Entity
 @Table(name = "assets")
@@ -33,7 +36,8 @@ public class AssetModel {
     private long sizeBytes;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "status", columnDefinition = "asset_status", nullable = false)
     private AssetStatusENUM status = AssetStatusENUM.ACTIVE;
 
     @Column(name = "created_by")
