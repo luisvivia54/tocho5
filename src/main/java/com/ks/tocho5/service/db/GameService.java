@@ -246,4 +246,155 @@ public class GameService {
             return LocalDateTime.parse(iso);
         }
     }
+ // =========================
+ // ✅ NUEVO: Editar score FINAL + corregir standings
+ // =========================
+ @Transactional
+ public String editFinalScore(Integer gameId, int newHomeScore, int newAwayScore) {
+     if (gameId == null) throw new IllegalArgumentException("Falta gameId");
+     if (newHomeScore < 0 || newAwayScore < 0) throw new IllegalArgumentException("Scores no pueden ser negativos");
+
+     // 1) Leer status/meta del juego (tabla game)
+     GameStatusModel statusRow = juegostatus.findById(gameId)
+         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partido no encontrado"));
+
+     if (!"FINAL".equalsIgnoreCase(statusRow.getStatus())) {
+         throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede editar si el partido está FINAL");
+     }
+
+     // IDs y contexto para standings
+     Integer homeTeamId = statusRow.getHome_team_id();
+     Integer awayTeamId = statusRow.getAway_team_id();
+     Integer categoryId = statusRow.getCategory_id();
+
+     if (homeTeamId == null || awayTeamId == null || categoryId == null) {
+         throw new ResponseStatusException(HttpStatus.CONFLICT, "Faltan datos (home/away/category) en GameStatusModel");
+     }
+
+     Integer seasonId = null;
+     if (statusRow.getSeason() != null) {
+         Object pk = em.getEntityManagerFactory()
+                       .getPersistenceUnitUtil()
+                       .getIdentifier(statusRow.getSeason());
+
+         if (pk instanceof Number) {
+             seasonId = ((Number) pk).intValue();
+         }
+     }
+     if (seasonId == null) {
+         throw new ResponseStatusException(
+             HttpStatus.CONFLICT,
+             "No pude obtener seasonId del partido (GameStatusModel.season)"
+         );
+     }
+
+     // 2) Leer score viejo (tabla game_score) con lock
+     GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId)
+         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe score guardado para ese gameId"));
+
+     Integer oldHome = scoreRow.getHome_score();
+     Integer oldAway = scoreRow.getAway_score();
+     if (oldHome == null || oldAway == null) {
+         throw new ResponseStatusException(HttpStatus.CONFLICT, "El score viejo está null (inconsistencia)");
+     }
+
+     // 3) Si no cambió, no hacemos nada
+     if (oldHome == newHomeScore && oldAway == newAwayScore) {
+         return "OK (sin cambios)";
+     }
+
+     // 4) Contribución vieja y nueva (HOME y AWAY)
+     Contribution oldHomeC = contributionForHome(oldHome, oldAway);
+     Contribution oldAwayC = contributionForAway(oldHome, oldAway);
+
+     Contribution newHomeC = contributionForHome(newHomeScore, newAwayScore);
+     Contribution newAwayC = contributionForAway(newHomeScore, newAwayScore);
+
+     // 5) Delta = new - old
+     Contribution dHome = newHomeC.minus(oldHomeC);
+     Contribution dAway = newAwayC.minus(oldAwayC);
+
+     // 6) Aplicar deltas a standings (SCOPED por season+category+team)
+     applyDeltaScoped(seasonId, categoryId, homeTeamId, dHome);
+     applyDeltaScoped(seasonId, categoryId, awayTeamId, dAway);
+
+     // 7) Guardar nuevo score
+     scoreRow.setHome_score(newHomeScore);
+     scoreRow.setAway_score(newAwayScore);
+     juegosrepo.save(scoreRow);
+
+     return "OK";
+ }
+
+ // ---------- helpers internos ----------
+ private static class Contribution {
+     int wins;
+     int draws;
+     int losses;
+     int pointsFor;
+     int pointsAgainst;
+     int tablePoints;
+
+     Contribution(int w, int d, int l, int pf, int pa, int tp) {
+         this.wins = w; this.draws = d; this.losses = l;
+         this.pointsFor = pf; this.pointsAgainst = pa; this.tablePoints = tp;
+     }
+
+     Contribution minus(Contribution other) {
+         return new Contribution(
+             this.wins - other.wins,
+             this.draws - other.draws,
+             this.losses - other.losses,
+             this.pointsFor - other.pointsFor,
+             this.pointsAgainst - other.pointsAgainst,
+             this.tablePoints - other.tablePoints
+         );
+     }
+ }
+
+ private Contribution contributionForHome(int homeScore, int awayScore) {
+     if (homeScore > awayScore) return new Contribution(1,0,0, homeScore, awayScore, 3);
+     if (homeScore == awayScore) return new Contribution(0,1,0, homeScore, awayScore, 1);
+     return new Contribution(0,0,1, homeScore, awayScore, 0);
+ }
+
+ private Contribution contributionForAway(int homeScore, int awayScore) {
+     if (awayScore > homeScore) return new Contribution(1,0,0, awayScore, homeScore, 3);
+     if (awayScore == homeScore) return new Contribution(0,1,0, awayScore, homeScore, 1);
+     return new Contribution(0,0,1, awayScore, homeScore, 0);
+ }
+
+ private void applyDeltaScoped(Integer seasonId, Integer categoryId, Integer teamId, Contribution d) {
+     // No tocamos GP en edición
+
+     if (d.wins != 0) {
+         int rows = standrepo.incWinsScoped(seasonId, categoryId, teamId, d.wins);
+         if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (wins) para teamId=" + teamId);
+     }
+
+     if (d.losses != 0) {
+         int rows = standrepo.incLossesScoped(seasonId, categoryId, teamId, d.losses);
+         if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (losses) para teamId=" + teamId);
+     }
+
+     if (d.draws != 0) {
+         int rows = standrepo.incDrawsScoped(seasonId, categoryId, teamId, d.draws);
+         if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (draws) para teamId=" + teamId);
+     }
+
+     if (d.pointsFor != 0) {
+         int rows = standrepo.incPointsForScoped(seasonId, categoryId, teamId, d.pointsFor);
+         if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (pointsFor) para teamId=" + teamId);
+     }
+
+     if (d.pointsAgainst != 0) {
+         int rows = standrepo.incPointsAgainstScoped(seasonId, categoryId, teamId, d.pointsAgainst);
+         if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (pointsAgainst) para teamId=" + teamId);
+     }
+
+     if (d.tablePoints != 0) {
+         int rows = standrepo.incTablePointsScoped(seasonId, categoryId, teamId, d.tablePoints);
+         if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (tablePoints) para teamId=" + teamId);
+     }
+ }
 }

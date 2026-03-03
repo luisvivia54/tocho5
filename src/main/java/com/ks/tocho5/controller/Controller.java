@@ -651,5 +651,28 @@ public class Controller {
         gameservice.deleteScheduledGame(gameId);
         return ResponseEntity.noContent().build();
     }
+ // ================= ADMIN / GAMES (EDIT SCORE FINAL) =================
+ // PATCH /api/admin/games/{gameId}/score
+ @PatchMapping("/admin/games/{gameId}/score")
+ @PreAuthorize("hasRole('admin')")
+ public ResponseEntity<?> adminEditFinalScore(
+         @PathVariable Integer gameId,
+         @RequestBody GameEditResultRequest req
+ ) {
+     if (req == null) {
+         return ResponseEntity.badRequest().body("Body vacío");
+     }
+     if (req.homeScore() == null || req.awayScore() == null) {
+         return ResponseEntity.badRequest().body("Faltan homeScore/awayScore");
+     }
+
+     String resp = gameservice.editFinalScore(gameId, req.homeScore(), req.awayScore());
+     return ResponseEntity.ok(Map.of(
+             "message", resp,
+             "gameId", gameId,
+             "homeScore", req.homeScore(),
+             "awayScore", req.awayScore()
+     ));
+ }
 
 }

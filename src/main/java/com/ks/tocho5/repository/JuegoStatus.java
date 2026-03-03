@@ -3,13 +3,21 @@ package com.ks.tocho5.repository;
 
 import com.ks.tocho5.model.GameStatusModel;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.LockModeType;
+
 public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
+
+  // 🔒 Opcional: lock al leer status durante edición
+  @Override
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  Optional<GameStatusModel> findById(Integer id);
 
   // =========================
   // UPDATE status
@@ -72,13 +80,12 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   """)
   List<GameStatusModel> findByStatusWithTeams(@Param("status") String status, Pageable pageable);
 
-  // ✅ Alias que tu controller usa (para FINAL con limit)
   default List<GameStatusModel> findFinalWithTeams(String status, Pageable pageable) {
     return findByStatusWithTeams(status, pageable);
   }
 
   // =========================
-  // FINAL + filtros (SIN LIMIT)  ✅ (para cuando mandas code/gender/roundLabel)
+  // FINAL + filtros (SIN LIMIT)
   // =========================
   @Query("""
      select g
@@ -123,7 +130,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   List<GameStatusModel> findLastGamesForTeam(@Param("teamId") Integer teamId, Pageable pageable);
 
   // =========================
-  // SCHEDULED + filtros: jornada/ gender / code  (SIN league)
+  // SCHEDULED + filtros
   // =========================
   @Query("""
      select g

@@ -1,3 +1,4 @@
+// src/main/java/com/ks/tocho5/repository/StandingTeamRepository.java
 package com.ks.tocho5.repository;
 
 import com.ks.tocho5.model.PointsRowProjection;
@@ -10,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface StandingTeamRepository extends JpaRepository<StandingTeamModel, Integer> {
 
-  // ================== UPDATES DE STATS ==================
+  // ================== UPDATES (LEGACY: SOLO team_id) ==================
+  // ⚠️ OJO: estos pueden afectar otras seasons/categories si existen.
+  // Los dejamos para no romper tu código actual.
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Transactional
@@ -75,7 +78,7 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
          """)
   int incrementTablePoints(@Param("id") Integer teamId, @Param("inc") int inc);
 
-  // Helpers
+  // Helpers legacy
   @Transactional default int addOneToGp(Integer teamId)                  { return incrementGp(teamId, 1); }
   @Transactional default int addOneToWins(Integer teamId)                { return incrementWins(teamId, 1); }
   @Transactional default int addOneToLosses(Integer teamId)              { return incrementLosses(teamId, 1); }
@@ -84,7 +87,94 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
   @Transactional default int addPointsAgainst(Integer teamId, Integer p) { return incrementPointsAgainst(teamId, p); }
   @Transactional default int addTablePoints(Integer teamId, Integer p)   { return incrementTablePoints(teamId, p); }
 
-  // ================== QUERIES DE STANDINGS ==================
+  // ================== UPDATES CORRECTOS (SCOPED) ==================
+  // ✅ Estos son los que debes usar para EDITAR resultados y también idealmente para FINALIZAR.
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query("""
+         update StandingTeamModel s
+            set s.wins = coalesce(s.wins, 0) + :inc
+          where s.season_id = :seasonId
+            and s.category_id = :categoryId
+            and s.team_id = :teamId
+         """)
+  int incWinsScoped(@Param("seasonId") Integer seasonId,
+                    @Param("categoryId") Integer categoryId,
+                    @Param("teamId") Integer teamId,
+                    @Param("inc") int inc);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query("""
+         update StandingTeamModel s
+            set s.losses = coalesce(s.losses, 0) + :inc
+          where s.season_id = :seasonId
+            and s.category_id = :categoryId
+            and s.team_id = :teamId
+         """)
+  int incLossesScoped(@Param("seasonId") Integer seasonId,
+                      @Param("categoryId") Integer categoryId,
+                      @Param("teamId") Integer teamId,
+                      @Param("inc") int inc);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query("""
+         update StandingTeamModel s
+            set s.draws = coalesce(s.draws, 0) + :inc
+          where s.season_id = :seasonId
+            and s.category_id = :categoryId
+            and s.team_id = :teamId
+         """)
+  int incDrawsScoped(@Param("seasonId") Integer seasonId,
+                     @Param("categoryId") Integer categoryId,
+                     @Param("teamId") Integer teamId,
+                     @Param("inc") int inc);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query("""
+         update StandingTeamModel s
+            set s.points_for = coalesce(s.points_for, 0) + :inc
+          where s.season_id = :seasonId
+            and s.category_id = :categoryId
+            and s.team_id = :teamId
+         """)
+  int incPointsForScoped(@Param("seasonId") Integer seasonId,
+                         @Param("categoryId") Integer categoryId,
+                         @Param("teamId") Integer teamId,
+                         @Param("inc") int inc);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query("""
+         update StandingTeamModel s
+            set s.points_against = coalesce(s.points_against, 0) + :inc
+          where s.season_id = :seasonId
+            and s.category_id = :categoryId
+            and s.team_id = :teamId
+         """)
+  int incPointsAgainstScoped(@Param("seasonId") Integer seasonId,
+                             @Param("categoryId") Integer categoryId,
+                             @Param("teamId") Integer teamId,
+                             @Param("inc") int inc);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query("""
+         update StandingTeamModel s
+            set s.table_points = coalesce(s.table_points, 0) + :inc
+          where s.season_id = :seasonId
+            and s.category_id = :categoryId
+            and s.team_id = :teamId
+         """)
+  int incTablePointsScoped(@Param("seasonId") Integer seasonId,
+                           @Param("categoryId") Integer categoryId,
+                           @Param("teamId") Integer teamId,
+                           @Param("inc") int inc);
+
+  // ================== QUERIES DE STANDINGS (igual que ya tienes) ==================
 
   @Query("""
          select s
@@ -106,15 +196,6 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
          """)
   List<StandingTeamModel> findAllWithTeam();
 
-  /**
-   * ✅ NUEVO: lista para /points con categoryCode + gender (y opcional leagueId).
-   * OJO: Esto es NATIVE porque StandingTeamModel NO tiene relación a CategoryModel.
-   *
-   * Ajusta nombres de tabla/columnas si en tu BD difieren:
-   * - standing_team (tabla standings)
-   * - team (tabla teams)
-   * - category (tabla categories)
-   */
   @Query(value = """
         SELECT
           st.standing_id    AS standingId,
@@ -152,17 +233,11 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
       @Param("gender") String gender
   );
 
-  /**
-   * ✅ Opcional: si quieres mantener el "filtered" anterior pero que ahora sí filtre:
-   * (Esto NO cambia tu endpoint, solo te sirve si lo sigues llamando en algún lado)
-   */
   default List<StandingTeamModel> findAllWithTeamFiltered(
       Integer leagueId,
       String categoryCode,
       String gender
   ) {
-    // Si todavía necesitas exactamente StandingTeamModel, déjalo como antes.
-    // Si YA migraste /points a projection, este método puede quedarse igual.
     return findAllWithTeam();
   }
 }
