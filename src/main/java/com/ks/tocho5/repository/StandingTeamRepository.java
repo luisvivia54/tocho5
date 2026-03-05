@@ -94,6 +94,20 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
   @Transactional
   @Query("""
          update StandingTeamModel s
+            set s.gp = coalesce(s.gp, 0) + :inc
+          where s.season_id = :seasonId
+            and s.category_id = :categoryId
+            and s.team_id = :teamId
+         """)
+  int incGpScoped(@Param("seasonId") Integer seasonId,
+                  @Param("categoryId") Integer categoryId,
+                  @Param("teamId") Integer teamId,
+                  @Param("inc") int inc);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query("""
+         update StandingTeamModel s
             set s.wins = coalesce(s.wins, 0) + :inc
           where s.season_id = :seasonId
             and s.category_id = :categoryId
@@ -174,7 +188,7 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
                            @Param("teamId") Integer teamId,
                            @Param("inc") int inc);
 
-  // ================== QUERIES DE STANDINGS (igual que ya tienes) ==================
+  // ================== QUERIES DE STANDINGS ==================
 
   @Query("""
          select s

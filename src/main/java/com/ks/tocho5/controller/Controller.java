@@ -11,21 +11,20 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.util.Map;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+
 import com.ks.tocho5.service.db.SeasonService;
 import com.ks.tocho5.model.SeasonLiteDto;
 import com.ks.tocho5.service.db.SiteConfigService;
 import com.ks.tocho5.model.dto.SiteConfigResponseDTO;
 import com.ks.tocho5.model.dto.SiteConfigUpsertRequestDTO;
 
-import java.util.Map;
-
 import org.springframework.http.MediaType;
 
-//estos dependen de cómo lo nombres en tu proyecto:
 import com.ks.tocho5.service.db.AssetService;
 import com.ks.tocho5.model.dto.*;
 
@@ -84,17 +83,16 @@ public class Controller {
     private final JuegosRepository juegosrepo;
     private final PlayerStatsService playerStatsService;
 
-    // ✅ nuevo
     private final AdminUserService adminUserService;
 
     private final ObjectMapper objectMapper;
-    
+
     private final SiteConfigService siteConfigService;
-    
+
     private final AssetService assetService;
 
     public Controller(
-    		AssetService assetService,
+            AssetService assetService,
             EquiposRepository repository,
             SiteConfigService siteConfigService,
             EquipoStatsService service,
@@ -110,14 +108,12 @@ public class Controller {
             TeamCarouselService teamCarouselService,
             CategoryService categoryService,
             PlayerStatsService playerStatsService,
-            // ✅ nuevo
             AdminUserService adminUserService,
             ObjectMapper objectMapper,
             SeasonService seasonService
-
     ) {
-    	this.assetService = assetService;
-    	this.siteConfigService = siteConfigService;
+        this.assetService = assetService;
+        this.siteConfigService = siteConfigService;
         this.repository = repository;
         this.seasonService = seasonService;
         this.service = service;
@@ -133,12 +129,11 @@ public class Controller {
         this.teamCarouselService = teamCarouselService;
         this.categoryService = categoryService;
         this.playerStatsService = playerStatsService;
-
         this.adminUserService = adminUserService;
-
         this.objectMapper = objectMapper;
     }
- // ================= ASSETS (R2 + Postgres) =================
+
+    // ================= ASSETS (R2 + Postgres) =================
     @PostMapping(value = "/assets/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('admin')")
     public ResponseEntity<AssetDTO> uploadAsset(
@@ -198,6 +193,7 @@ public class Controller {
         }
         return juegostat.findScheduledWithTeamsFiltered(c, g, r);
     }
+
     @PostMapping("/games")
     public ResponseEntity<?> createGame(@RequestBody GameCreateRequest req) {
         GameStatusModel created = gameservice.createScheduledGame(req);
@@ -281,8 +277,7 @@ public class Controller {
     }
 
     // ================= ADMIN / USERS =================
-    // GET /api/admin/users?q=&role=&active=&page=&size=&sort=
-    // sort: createdDesc | createdAsc | nameAsc | teamsDesc
+
     @GetMapping("/admin/users")
     @PreAuthorize("hasRole('admin')")
     public Page<AdminUserRowDTO> adminListUsers(
@@ -296,8 +291,6 @@ public class Controller {
         return adminUserService.list(q, role, active, page, size, sort);
     }
 
-    // PATCH /api/admin/users/{id}
-    // body: { "role": "USER"|"CAPTAIN", "maxTeamsAllowed": 0..99, "isActive": true|false }
     @PatchMapping("/admin/users/{id}")
     @PreAuthorize("hasRole('admin')")
     public AdminUserRowDTO adminPatchUser(
@@ -307,7 +300,7 @@ public class Controller {
         return adminUserService.patch(id, req);
     }
 
-    // ================= ACTUALIZAR PARTIDO =================
+    // ================= ACTUALIZAR PARTIDO (FINALIZAR) =================
 
     @PostMapping("/partido/update")
     public Object partidoupdate(@RequestBody JsonNode body) {
@@ -570,7 +563,7 @@ public class Controller {
         return categoryService.getCategories(leagueId, gender);
     }
 
-    // ================= ACTIVAR / DESACTIVAR (ELIMINAR LÓGICO) =================
+    // ================= ACTIVAR / DESACTIVAR =================
 
     @PatchMapping("/teams/{teamId}/active")
     public ResponseEntity<EquiposModel> setTeamActive(
@@ -585,48 +578,28 @@ public class Controller {
         EquiposModel updated = teamService.setTeamActive(jwt, teamId, req.getIsActive());
         return ResponseEntity.ok(updated);
     }
-    
- // ================= SITE CONFIG (HOME) =================
 
- // Público: el home consume esto
- @GetMapping("/site-configs/home")
- public ResponseEntity<SiteConfigResponseDTO> getHomeConfig() {
-     return ResponseEntity.ok(siteConfigService.getHome());
- }
+    // ================= SITE CONFIG (HOME) =================
 
- // Solo admin: tu /admin/home.vue guarda aquí
- @PutMapping("/site-configs/home")
- //@PreAuthorize("hasRole('admin')")
- public ResponseEntity<SiteConfigResponseDTO> putHomeConfig(@RequestBody SiteConfigUpsertRequestDTO req) {
-     return ResponseEntity.ok(siteConfigService.putHome(req));
- }
-
-    // ================= HELPERS =================
-
-    private String normalizeFilterParam(String value) {
-        if (value == null) return null;
-        String v = value.trim();
-        if (v.isEmpty() || "all".equalsIgnoreCase(v)) return null;
-        return v.toUpperCase();
+    @GetMapping("/site-configs/home")
+    public ResponseEntity<SiteConfigResponseDTO> getHomeConfig() {
+        return ResponseEntity.ok(siteConfigService.getHome());
     }
- // ================= TEMPORADAS =================
 
-    /**
-     * GET /api/seasons?leagueId=1
-     * Regresa lista ligera: [{id, name}]
-     */
+    @PutMapping("/site-configs/home")
+    public ResponseEntity<SiteConfigResponseDTO> putHomeConfig(@RequestBody SiteConfigUpsertRequestDTO req) {
+        return ResponseEntity.ok(siteConfigService.putHome(req));
+    }
+
+    // ================= TEMPORADAS =================
+
     @GetMapping("/seasons")
     public List<SeasonLiteDto> listSeasons(
             @RequestParam(name = "leagueId", required = false) Long leagueId
     ) {
-        // Si tu repo/service ya filtra por leagueId, úsalo aquí.
-        // Si NO tienes liga en season, puedes ignorar leagueId.
         return seasonService.listLite(leagueId);
     }
 
-    /**
-     * Alias por si el front usa /seasons/list
-     */
     @GetMapping("/seasons/list")
     public List<SeasonLiteDto> listSeasonsAlias(
             @RequestParam(name = "leagueId", required = false) Long leagueId
@@ -634,10 +607,6 @@ public class Controller {
         return seasonService.listLite(leagueId);
     }
 
-    /**
-     * GET /api/seasons/current?leagueId=1
-     * Regresa { "seasonId": 123 }
-     */
     @GetMapping("/seasons/current")
     public Map<String, Long> getCurrentSeason(
             @RequestParam(name = "leagueId") Long leagueId
@@ -645,34 +614,58 @@ public class Controller {
         Long seasonId = seasonService.getCurrentSeasonId(leagueId);
         return Map.of("seasonId", seasonId);
     }
-    
+
+    // ================= DELETE SCHEDULED (LEGACY) =================
+    // OJO: esto solo borra SCHEDULED (tu lógica actual)
     @DeleteMapping("/games/{gameId}")
     public ResponseEntity<Void> deleteScheduledGame(@PathVariable Long gameId) {
         gameservice.deleteScheduledGame(gameId);
         return ResponseEntity.noContent().build();
     }
- // ================= ADMIN / GAMES (EDIT SCORE FINAL) =================
- // PATCH /api/admin/games/{gameId}/score
- @PatchMapping("/admin/games/{gameId}/score")
- @PreAuthorize("hasRole('admin')")
- public ResponseEntity<?> adminEditFinalScore(
-         @PathVariable Integer gameId,
-         @RequestBody GameEditResultRequest req
- ) {
-     if (req == null) {
-         return ResponseEntity.badRequest().body("Body vacío");
-     }
-     if (req.homeScore() == null || req.awayScore() == null) {
-         return ResponseEntity.badRequest().body("Faltan homeScore/awayScore");
-     }
 
-     String resp = gameservice.editFinalScore(gameId, req.homeScore(), req.awayScore());
-     return ResponseEntity.ok(Map.of(
-             "message", resp,
-             "gameId", gameId,
-             "homeScore", req.homeScore(),
-             "awayScore", req.awayScore()
-     ));
- }
+    // ================= ADMIN / GAMES (EDIT SCORE FINAL) =================
+    // PATCH /api/admin/games/{gameId}/score
+    public record GameEditResultRequest(Integer homeScore, Integer awayScore) {}
 
+    @PatchMapping("/admin/games/{gameId}/score")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> adminEditFinalScore(
+            @PathVariable Integer gameId,
+            @RequestBody GameEditResultRequest req
+    ) {
+        if (req == null) return ResponseEntity.badRequest().body("Body vacío");
+        if (req.homeScore() == null || req.awayScore() == null) {
+            return ResponseEntity.badRequest().body("Faltan homeScore/awayScore");
+        }
+
+        String resp = gameservice.editFinalScore(gameId, req.homeScore(), req.awayScore());
+        return ResponseEntity.ok(Map.of(
+                "message", resp,
+                "gameId", gameId,
+                "homeScore", req.homeScore(),
+                "awayScore", req.awayScore()
+        ));
+    }
+
+    // ================= ADMIN / GAMES (DELETE + REVERT) =================
+    // DELETE /api/admin/games/{gameId}
+    // - SCHEDULED: hard delete
+    // - FINAL: revierte standings y marca CANCELLED
+    @DeleteMapping("/admin/games/{gameId}")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> adminDeleteGameAndRevert(@PathVariable Long gameId) {
+        String resp = gameservice.deleteGameAndRevert(gameId);
+        return ResponseEntity.ok(Map.of(
+                "message", resp,
+                "gameId", gameId
+        ));
+    }
+
+    // ================= HELPERS =================
+    private String normalizeFilterParam(String value) {
+        if (value == null) return null;
+        String v = value.trim();
+        if (v.isEmpty() || "all".equalsIgnoreCase(v)) return null;
+        return v.toUpperCase();
+    }
 }

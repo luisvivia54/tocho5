@@ -1,3 +1,4 @@
+// src/main/java/com/ks/tocho5/model/dto/GameCreateRequest.java
 package com.ks.tocho5.model.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
@@ -27,6 +28,11 @@ public record GameCreateRequest(
         String matchDateUtc,
 
         @JsonAlias({"round_label", "roundLabel"})
-        String roundLabel
+        String roundLabel,
+
+        // ✅ NUEVO: cancha / sede
+        // acepta cualquiera de estos nombres desde el front
+        @JsonAlias({"venue", "field", "location", "cancha"})
+        String venue
 
 ) {}

@@ -21,14 +21,14 @@ import jakarta.persistence.Transient;
 public class GameStatusModel {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY) // ✅ auto id (Postgres serial/identity)
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "game_id")
   private Integer game_id;
 
   @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "season_id")   // <- esta es la columna en la tabla game
-  private SeasonModel season;   
+  @JoinColumn(name = "season_id")
+  private SeasonModel season;
 
   @Column(name = "category_id")
   private Integer category_id;
@@ -45,11 +45,13 @@ public class GameStatusModel {
   @Column(name = "match_date_utc")
   private LocalDateTime match_date_utc;
 
-  // OJO: en tu repo usas g.round_la, por eso debe existir el atributo
   @Column(name = "round_label")
   private String roundLabel;
 
-  // opcional
+  // ✅ NUEVO: cancha/sede (PERSISTE en game.venue)
+  @Column(name = "venue")
+  private String venue;
+
   @Column(name = "updated_at")
   private LocalDateTime updated_at;
 
@@ -73,8 +75,6 @@ public class GameStatusModel {
   )
   private EquiposModel awayTeam;
 
-  // ✅ ESTO arregla el error: "Could not resolve attribute 'category'"
-  // Si tu clase se llama diferente, cambia SOLO el tipo (CategoryModel).
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(
       name = "category_id",
@@ -86,101 +86,45 @@ public class GameStatusModel {
 
   // ===== Getters / Setters =====
 
-  public Integer getGame_id() {
-    return game_id;
-  }
+  public Integer getGame_id() { return game_id; }
+  public void setGame_id(Integer game_id) { this.game_id = game_id; }
 
-  public void setGame_id(Integer game_id) {
-    this.game_id = game_id;
-  }
+  public SeasonModel getSeason() { return season; }
+  public void setSeason(SeasonModel season) { this.season = season; }
 
-  public SeasonModel getSeason() {
-    return season;
-  }
+  public Integer getCategory_id() { return category_id; }
+  public void setCategory_id(Integer category_id) { this.category_id = category_id; }
 
-  public void setSeason(SeasonModel season) {
-    this.season = season;
-  }
+  public Integer getHome_team_id() { return home_team_id; }
+  public void setHome_team_id(Integer home_team_id) { this.home_team_id = home_team_id; }
 
-  public Integer getCategory_id() {
-    return category_id;
-  }
+  public Integer getAway_team_id() { return away_team_id; }
+  public void setAway_team_id(Integer away_team_id) { this.away_team_id = away_team_id; }
 
-  public void setCategory_id(Integer category_id) {
-    this.category_id = category_id;
-  }
+  public String getStatus() { return status; }
+  public void setStatus(String status) { this.status = status; }
 
-  public Integer getHome_team_id() {
-    return home_team_id;
-  }
+  public LocalDateTime getMatch_date_utc() { return match_date_utc; }
+  public void setMatch_date_utc(LocalDateTime match_date_utc) { this.match_date_utc = match_date_utc; }
 
-  public void setHome_team_id(Integer home_team_id) {
-    this.home_team_id = home_team_id;
-  }
+  public String getRoundLabel() { return roundLabel; }
+  public void setRoundLabel(String roundLabel) { this.roundLabel = roundLabel; }
 
-  public Integer getAway_team_id() {
-    return away_team_id;
-  }
+  // ✅ venue
+  public String getVenue() { return venue; }
+  public void setVenue(String venue) { this.venue = venue; }
 
-  public void setAway_team_id(Integer away_team_id) {
-    this.away_team_id = away_team_id;
-  }
+  public LocalDateTime getUpdated_at() { return updated_at; }
+  public void setUpdated_at(LocalDateTime updated_at) { this.updated_at = updated_at; }
 
-  public String getStatus() {
-    return status;
-  }
+  public EquiposModel getHomeTeam() { return homeTeam; }
+  public void setHomeTeam(EquiposModel homeTeam) { this.homeTeam = homeTeam; }
 
-  public void setStatus(String status) {
-    this.status = status;
-  }
+  public EquiposModel getAwayTeam() { return awayTeam; }
+  public void setAwayTeam(EquiposModel awayTeam) { this.awayTeam = awayTeam; }
 
-  public LocalDateTime getMatch_date_utc() {
-    return match_date_utc;
-  }
-
-  public void setMatch_date_utc(LocalDateTime match_date_utc) {
-    this.match_date_utc = match_date_utc;
-  }
-
-  public String getRoundLabel() {
-    return roundLabel;
-  }
-
-  public void setRoundLabel(String roundLabel) {
-    this.roundLabel = roundLabel;
-  }
-
-  public LocalDateTime getUpdated_at() {
-    return updated_at;
-  }
-
-  public void setUpdated_at(LocalDateTime updated_at) {
-    this.updated_at = updated_at;
-  }
-
-  public EquiposModel getHomeTeam() {
-    return homeTeam;
-  }
-
-  public void setHomeTeam(EquiposModel homeTeam) {
-    this.homeTeam = homeTeam;
-  }
-
-  public EquiposModel getAwayTeam() {
-    return awayTeam;
-  }
-
-  public void setAwayTeam(EquiposModel awayTeam) {
-    this.awayTeam = awayTeam;
-  }
-
-  public CategoryModel getCategory() {
-    return category;
-  }
-
-  public void setCategory(CategoryModel category) {
-    this.category = category;
-  }
+  public CategoryModel getCategory() { return category; }
+  public void setCategory(CategoryModel category) { this.category = category; }
 
   // ---- Getters “de nombre” (para JSON bonito) ----
   @com.fasterxml.jackson.annotation.JsonProperty("home_team")
@@ -192,28 +136,19 @@ public class GameStatusModel {
   public String getAwayTeamName() {
     return awayTeam != null ? awayTeam.getName() : null;
   }
-//================== SCORE (NO PERSISTE EN game) ==================
- @Transient
- private Integer homeScore;
 
- @Transient
- private Integer awayScore;
+  //================== SCORE (NO PERSISTE EN game) ==================
+  @Transient
+  private Integer homeScore;
 
- public Integer getHomeScore() {
-   return homeScore;
- }
+  @Transient
+  private Integer awayScore;
 
- public void setHomeScore(Integer homeScore) {
-   this.homeScore = homeScore;
- }
+  public Integer getHomeScore() { return homeScore; }
+  public void setHomeScore(Integer homeScore) { this.homeScore = homeScore; }
 
- public Integer getAwayScore() {
-   return awayScore;
- }
-
- public void setAwayScore(Integer awayScore) {
-   this.awayScore = awayScore;
- }
+  public Integer getAwayScore() { return awayScore; }
+  public void setAwayScore(Integer awayScore) { this.awayScore = awayScore; }
 
   @Override
   public String toString() {
@@ -225,6 +160,7 @@ public class GameStatusModel {
         + ", status=" + status
         + ", match_date_utc=" + match_date_utc
         + ", round_label=" + roundLabel
+        + ", venue=" + venue
         + "]";
   }
 }
