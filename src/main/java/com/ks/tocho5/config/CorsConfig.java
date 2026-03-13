@@ -16,6 +16,8 @@ public class CorsConfig implements WebMvcConfigurer {
         "http://localhost:*",
         "http://127.0.0.1:*",
         "https://tochero5.mx",
+        "https://develop.tochero5.mx",
+        "https://www.develop.tochero5.mx",
         "https://www.tochero5.mx"
       )
       .allowedMethods("GET","POST","PUT","PATCH","DELETE","OPTIONS")
