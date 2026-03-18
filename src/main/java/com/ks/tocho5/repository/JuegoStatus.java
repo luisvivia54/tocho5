@@ -87,23 +87,27 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   // =========================
   // FINAL + filtros (SIN LIMIT)
   // =========================
-  @Query("""
-     select g
-       from GameStatusModel g
-       join fetch g.homeTeam
-       join fetch g.awayTeam
-       join fetch g.category c
-      where upper(g.status) = 'FINAL'
-        and (:code is null or upper(c.code) = upper(:code))
-        and (:gender is null or upper(c.gender) = upper(:gender))
-        and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
-      order by g.match_date_utc desc
-  """)
-  List<GameStatusModel> findFinalWithTeamsFiltered(
-      @Param("code") String code,
-      @Param("gender") String gender,
-      @Param("roundLabel") String roundLabel
-  );
+//REEMPLAZA findFinalWithTeamsFiltered
+@Query("""
+  select g
+    from GameStatusModel g
+    join fetch g.homeTeam
+    join fetch g.awayTeam
+    join fetch g.category c
+    join fetch g.season s
+   where upper(g.status) = 'FINAL'
+     and (:leagueId is null or c.leagueId = :leagueId)
+     and (:code is null or upper(c.code) = upper(:code))
+     and (:gender is null or upper(c.gender) = upper(:gender))
+     and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
+   order by g.match_date_utc desc
+""")
+List<GameStatusModel> findFinalWithTeamsFiltered(
+   @Param("leagueId") Integer leagueId,
+   @Param("code") String code,
+   @Param("gender") String gender,
+   @Param("roundLabel") String roundLabel
+);
 
   // =========================
   // Un partido con equipos + category
@@ -132,21 +136,25 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   // =========================
   // SCHEDULED + filtros
   // =========================
-  @Query("""
-     select g
-       from GameStatusModel g
-       join fetch g.homeTeam
-       join fetch g.awayTeam
-       join fetch g.category c
-      where upper(g.status) = 'SCHEDULED'
-        and (:code is null or upper(c.code) = upper(:code))
-        and (:gender is null or upper(c.gender) = upper(:gender))
-        and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
-      order by g.match_date_utc asc
-  """)
-  List<GameStatusModel> findScheduledWithTeamsFiltered(
-      @Param("code") String code,
-      @Param("gender") String gender,
-      @Param("roundLabel") String roundLabel
-  );
+//REEMPLAZA findScheduledWithTeamsFiltered
+@Query("""
+  select g
+    from GameStatusModel g
+    join fetch g.homeTeam
+    join fetch g.awayTeam
+    join fetch g.category c
+    join fetch g.season s
+   where upper(g.status) = 'SCHEDULED'
+     and (:leagueId is null or c.leagueId = :leagueId)
+     and (:code is null or upper(c.code) = upper(:code))
+     and (:gender is null or upper(c.gender) = upper(:gender))
+     and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
+   order by g.match_date_utc asc
+""")
+List<GameStatusModel> findScheduledWithTeamsFiltered(
+   @Param("leagueId") Integer leagueId,
+   @Param("code") String code,
+   @Param("gender") String gender,
+   @Param("roundLabel") String roundLabel
+);
 }

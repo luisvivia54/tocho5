@@ -177,6 +177,7 @@ public class Controller {
 
     // ================= PARTIDOS =================
 
+ // REEMPLAZA el método findAllGames completo
     @GetMapping("/games")
     public List<GameStatusModel> findAllGames(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
@@ -191,7 +192,7 @@ public class Controller {
         if (leagueId == null && c == null && g == null && r == null) {
             return juegostat.findAllScheduledWithTeams();
         }
-        return juegostat.findScheduledWithTeamsFiltered(c, g, r);
+        return juegostat.findScheduledWithTeamsFiltered(leagueId, c, g, r);
     }
 
     @PostMapping("/games")
@@ -203,6 +204,7 @@ public class Controller {
         ));
     }
 
+ // REEMPLAZA el método findAllFinalGames completo
     @GetMapping("/gamesFinal")
     public List<GameStatusModel> findAllFinalGames(
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
@@ -219,7 +221,7 @@ public class Controller {
         boolean hasFilters = (leagueId != null || c != null || g != null || r != null);
 
         List<GameStatusModel> finals = (all || hasFilters)
-                ? juegostat.findFinalWithTeamsFiltered(c, g, r)
+                ? juegostat.findFinalWithTeamsFiltered(leagueId, c, g, r)  // ← leagueId aquí
                 : juegostat.findFinalWithTeams("FINAL", PageRequest.of(0, size));
 
         if (finals == null || finals.isEmpty()) return finals;
