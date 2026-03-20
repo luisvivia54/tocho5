@@ -180,7 +180,7 @@ public class Controller {
  // REEMPLAZA el método findAllGames completo
     @GetMapping("/games")
     public List<GameStatusModel> findAllGames(
-            @RequestParam(name = "leagueId", required = false) Integer leagueId,
+    		@RequestParam(name = "leagueId", required = false) Long leagueId,
             @RequestParam(name = "code", required = false) String code,
             @RequestParam(name = "gender", required = false) String gender,
             @RequestParam(name = "roundLabel", required = false) String roundLabel
@@ -207,7 +207,7 @@ public class Controller {
  // REEMPLAZA el método findAllFinalGames completo
     @GetMapping("/gamesFinal")
     public List<GameStatusModel> findAllFinalGames(
-            @RequestParam(name = "leagueId", required = false) Integer leagueId,
+    		@RequestParam(name = "leagueId", required = false) Long leagueId,
             @RequestParam(name = "code", required = false) String code,
             @RequestParam(name = "gender", required = false) String gender,
             @RequestParam(name = "roundLabel", required = false) String roundLabel,
