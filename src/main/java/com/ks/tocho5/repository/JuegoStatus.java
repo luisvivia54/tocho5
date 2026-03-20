@@ -66,7 +66,6 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
     return findByStatusWithTeams(status, pageable);
   }
 
-  // ← leagueId es Long (coincide con CategoryModel.leagueId) + join fetch season
   @Query("""
      select g
        from GameStatusModel g
@@ -76,9 +75,9 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.season s
       where upper(g.status) = 'FINAL'
         and (:leagueId is null or c.leagueId = :leagueId)
-        and (:code is null or upper(c.code) = upper(:code))
-        and (:gender is null or upper(c.gender) = upper(:gender))
-        and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
+        and (:code is null or upper(c.code) = upper(cast(:code as string)))
+        and (:gender is null or upper(c.gender) = upper(cast(:gender as string)))
+        and (:roundLabel is null or upper(g.roundLabel) = upper(cast(:roundLabel as string)))
       order by g.match_date_utc desc
   """)
   List<GameStatusModel> findFinalWithTeamsFiltered(
@@ -106,7 +105,6 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
   """)
   List<GameStatusModel> findLastGamesForTeam(@Param("teamId") Integer teamId, Pageable pageable);
 
-  // ← leagueId es Long (coincide con CategoryModel.leagueId) + join fetch season
   @Query("""
      select g
        from GameStatusModel g
@@ -116,9 +114,9 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.season s
       where upper(g.status) = 'SCHEDULED'
         and (:leagueId is null or c.leagueId = :leagueId)
-        and (:code is null or upper(c.code) = upper(:code))
-        and (:gender is null or upper(c.gender) = upper(:gender))
-        and (:roundLabel is null or upper(g.roundLabel) = upper(:roundLabel))
+        and (:code is null or upper(c.code) = upper(cast(:code as string)))
+        and (:gender is null or upper(c.gender) = upper(cast(:gender as string)))
+        and (:roundLabel is null or upper(g.roundLabel) = upper(cast(:roundLabel as string)))
       order by g.match_date_utc asc
   """)
   List<GameStatusModel> findScheduledWithTeamsFiltered(
