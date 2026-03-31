@@ -43,60 +43,60 @@ public class GameService {
     private EntityManager em;
 
     // =========================
-    // ✅ TU MÉTODO ORIGINAL (igual)
+    // ✅ FINALIZAR / GUARDAR SCORE
     // =========================
     @Transactional
     public String saveGame(GameModel gamemodel) {
         try {
-            juegosrepo.save(gamemodel);
+            validateIncomingScore(gamemodel);
 
-            // cambia a FINAL en la tabla/vista donde vive el status
-            juegostatus.finalById(gamemodel.getGame_id());
+            LockedGameContext ctx = loadLockedGameContext(gamemodel.getGame_id());
+            Integer gameId = gamemodel.getGame_id();
+            int newHomeScore = gamemodel.getHome_score();
+            int newAwayScore = gamemodel.getAway_score();
 
-            // suma GP
-            standrepo.addOneToGp(juegostatus.findHomeTeamId(gamemodel.getGame_id()));
-            standrepo.addOneToGp(juegostatus.findAwayTeamId(gamemodel.getGame_id()));
+            if ("FINAL".equalsIgnoreCase(ctx.statusRow().getStatus())) {
+                GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                                "El partido ya estaba FINAL pero no tiene score guardado"));
 
-            // gana local
-            if (gamemodel.getHome_score() > gamemodel.getAway_score()) {
-                standrepo.addOneToWins(juegostatus.findHomeTeamId(gamemodel.getGame_id()));
-                standrepo.addOneToLosses(juegostatus.findAwayTeamId(gamemodel.getGame_id()));
+                Integer oldHome = scoreRow.getHome_score();
+                Integer oldAway = scoreRow.getAway_score();
+                if (oldHome == null || oldAway == null) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "El score viejo está null (inconsistencia)");
+                }
 
-                standrepo.addPointsFor(juegostatus.findHomeTeamId(gamemodel.getGame_id()), gamemodel.getHome_score());
-                standrepo.addPointsFor(juegostatus.findAwayTeamId(gamemodel.getGame_id()), gamemodel.getAway_score());
+                if (oldHome == newHomeScore && oldAway == newAwayScore) {
+                    return "OK";
+                }
 
-                standrepo.addPointsAgainst(juegostatus.findHomeTeamId(gamemodel.getGame_id()), gamemodel.getAway_score());
-                standrepo.addPointsAgainst(juegostatus.findAwayTeamId(gamemodel.getGame_id()), gamemodel.getHome_score());
-
-                standrepo.addTablePoints(juegostatus.findHomeTeamId(gamemodel.getGame_id()), 3);
-
-            // empate
-            } else if (gamemodel.getHome_score() == gamemodel.getAway_score()) {
-                standrepo.addOneToDraws(juegostatus.findHomeTeamId(gamemodel.getGame_id()));
-                standrepo.addOneToDraws(juegostatus.findAwayTeamId(gamemodel.getGame_id()));
-
-                standrepo.addPointsFor(juegostatus.findHomeTeamId(gamemodel.getGame_id()), gamemodel.getHome_score());
-                standrepo.addPointsFor(juegostatus.findAwayTeamId(gamemodel.getGame_id()), gamemodel.getAway_score());
-
-                standrepo.addPointsAgainst(juegostatus.findHomeTeamId(gamemodel.getGame_id()), gamemodel.getAway_score());
-                standrepo.addPointsAgainst(juegostatus.findAwayTeamId(gamemodel.getGame_id()), gamemodel.getHome_score());
-
-                standrepo.addTablePoints(juegostatus.findHomeTeamId(gamemodel.getGame_id()), 1);
-                standrepo.addTablePoints(juegostatus.findAwayTeamId(gamemodel.getGame_id()), 1);
-
-            // gana visita
-            } else {
-                standrepo.addOneToWins(juegostatus.findAwayTeamId(gamemodel.getGame_id()));
-                standrepo.addOneToLosses(juegostatus.findHomeTeamId(gamemodel.getGame_id()));
-
-                standrepo.addPointsFor(juegostatus.findHomeTeamId(gamemodel.getGame_id()), gamemodel.getHome_score());
-                standrepo.addPointsFor(juegostatus.findAwayTeamId(gamemodel.getGame_id()), gamemodel.getAway_score());
-
-                standrepo.addPointsAgainst(juegostatus.findHomeTeamId(gamemodel.getGame_id()), gamemodel.getAway_score());
-                standrepo.addPointsAgainst(juegostatus.findAwayTeamId(gamemodel.getGame_id()), gamemodel.getHome_score());
-
-                standrepo.addTablePoints(juegostatus.findAwayTeamId(gamemodel.getGame_id()), 3);
+                updateExistingFinalScore(ctx, scoreRow, newHomeScore, newAwayScore);
+                return "OK";
             }
+
+            if (!"SCHEDULED".equalsIgnoreCase(ctx.statusRow().getStatus())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Solo se puede guardar score si el partido está SCHEDULED o FINAL");
+            }
+
+            GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId).orElseGet(() -> {
+                GameModel fresh = new GameModel();
+                fresh.setGame_id(gameId);
+                return fresh;
+            });
+
+            scoreRow.setHome_score(newHomeScore);
+            scoreRow.setAway_score(newAwayScore);
+            juegosrepo.save(scoreRow);
+
+            ctx.statusRow().setStatus("FINAL");
+            ctx.statusRow().setUpdated_at(LocalDateTime.now());
+            juegostatus.save(ctx.statusRow());
+
+            applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(),
+                    contributionForHome(newHomeScore, newAwayScore), 1);
+            applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(),
+                    contributionForAway(newHomeScore, newAwayScore), 1);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -247,55 +247,14 @@ public class GameService {
         if (gameId == null) throw new IllegalArgumentException("Falta gameId");
         if (newHomeScore < 0 || newAwayScore < 0) throw new IllegalArgumentException("Scores no pueden ser negativos");
 
-        GameStatusModel statusRow = juegostatus.findById(gameId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partido no encontrado"));
-
-        if (!"FINAL".equalsIgnoreCase(statusRow.getStatus())) {
+        LockedGameContext ctx = loadLockedGameContext(gameId);
+        if (!"FINAL".equalsIgnoreCase(ctx.statusRow().getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede editar si el partido está FINAL");
-        }
-
-        Integer homeTeamId = statusRow.getHome_team_id();
-        Integer awayTeamId = statusRow.getAway_team_id();
-        Integer categoryId = statusRow.getCategory_id();
-
-        if (homeTeamId == null || awayTeamId == null || categoryId == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Faltan datos (home/away/category) en GameStatusModel");
-        }
-
-        Integer seasonId = extractSeasonId(statusRow);
-        if (seasonId == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "No pude obtener seasonId del partido (GameStatusModel.season)");
         }
 
         GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe score guardado para ese gameId"));
-
-        Integer oldHome = scoreRow.getHome_score();
-        Integer oldAway = scoreRow.getAway_score();
-        if (oldHome == null || oldAway == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "El score viejo está null (inconsistencia)");
-        }
-
-        if (oldHome == newHomeScore && oldAway == newAwayScore) {
-            return "OK (sin cambios)";
-        }
-
-        Contribution oldHomeC = contributionForHome(oldHome, oldAway);
-        Contribution oldAwayC = contributionForAway(oldHome, oldAway);
-
-        Contribution newHomeC = contributionForHome(newHomeScore, newAwayScore);
-        Contribution newAwayC = contributionForAway(newHomeScore, newAwayScore);
-
-        Contribution dHome = newHomeC.minus(oldHomeC);
-        Contribution dAway = newAwayC.minus(oldAwayC);
-
-        applyDeltaScopedStrict(seasonId, categoryId, homeTeamId, dHome);
-        applyDeltaScopedStrict(seasonId, categoryId, awayTeamId, dAway);
-
-        scoreRow.setHome_score(newHomeScore);
-        scoreRow.setAway_score(newAwayScore);
-        juegosrepo.save(scoreRow);
-
+        updateExistingFinalScore(ctx, scoreRow, newHomeScore, newAwayScore);
         return "OK";
     }
 
@@ -315,10 +274,8 @@ public class GameService {
             throw new IllegalArgumentException("gameId fuera de rango: " + gameId);
         }
 
-        GameStatusModel statusRow = juegostatus.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partido no encontrado"));
-
-        String status = (statusRow.getStatus() == null) ? "" : statusRow.getStatus().toUpperCase();
+        LockedGameContext ctx = loadLockedGameContext(id);
+        String status = (ctx.statusRow().getStatus() == null) ? "" : ctx.statusRow().getStatus().toUpperCase();
 
         if ("SCHEDULED".equals(status)) {
             deleteScheduledGame(gameId);
@@ -328,18 +285,6 @@ public class GameService {
         if (!"FINAL".equals(status)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Solo puedo revertir si está FINAL (o borrar si está SCHEDULED). Status=" + status);
-        }
-
-        Integer homeTeamId = statusRow.getHome_team_id();
-        Integer awayTeamId = statusRow.getAway_team_id();
-        Integer categoryId = statusRow.getCategory_id();
-        if (homeTeamId == null || awayTeamId == null || categoryId == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Faltan datos (home/away/category) en GameStatusModel");
-        }
-
-        Integer seasonId = extractSeasonId(statusRow);
-        if (seasonId == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "No pude obtener seasonId del partido");
         }
 
         GameModel scoreRow = juegosrepo.findByIdForUpdate(id)
@@ -354,12 +299,12 @@ public class GameService {
         Contribution homeC = contributionForHome(oldHome, oldAway).negate();
         Contribution awayC = contributionForAway(oldHome, oldAway).negate();
 
-        applyDeltaScopedOrLegacy(seasonId, categoryId, homeTeamId, homeC, -1);
-        applyDeltaScopedOrLegacy(seasonId, categoryId, awayTeamId, awayC, -1);
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(), homeC, -1);
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(), awayC, -1);
 
-        statusRow.setStatus("CANCELLED");
-        statusRow.setUpdated_at(LocalDateTime.now());
-        juegostatus.save(statusRow);
+        ctx.statusRow().setStatus("CANCELLED");
+        ctx.statusRow().setUpdated_at(LocalDateTime.now());
+        juegostatus.save(ctx.statusRow());
 
         try {
             juegosrepo.delete(scoreRow);
@@ -379,8 +324,50 @@ public class GameService {
         }
     }
 
+    private void validateIncomingScore(GameModel gamemodel) {
+        if (gamemodel == null) throw new IllegalArgumentException("Body vacío");
+        if (gamemodel.getGame_id() == null) throw new IllegalArgumentException("Falta game_id");
+        if (gamemodel.getHome_score() == null || gamemodel.getAway_score() == null) {
+            throw new IllegalArgumentException("Scores no pueden ser null");
+        }
+        if (gamemodel.getHome_score() < 0 || gamemodel.getAway_score() < 0) {
+            throw new IllegalArgumentException("Scores no pueden ser negativos");
+        }
+    }
+
+    private record LockedGameContext(
+            GameStatusModel statusRow,
+            Integer seasonId,
+            Integer categoryId,
+            Integer homeTeamId,
+            Integer awayTeamId
+    ) {}
+
+    private LockedGameContext loadLockedGameContext(Integer gameId) {
+        GameStatusModel statusRow = juegostatus.findById(gameId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partido no encontrado"));
+
+        Integer homeTeamId = statusRow.getHome_team_id();
+        Integer awayTeamId = statusRow.getAway_team_id();
+        Integer categoryId = statusRow.getCategory_id();
+        if (homeTeamId == null || awayTeamId == null || categoryId == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Faltan datos (home/away/category) en GameStatusModel");
+        }
+
+        Integer seasonId = extractSeasonId(statusRow);
+        if (seasonId == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No pude obtener seasonId del partido");
+        }
+
+        return new LockedGameContext(statusRow, seasonId, categoryId, homeTeamId, awayTeamId);
+    }
+
     private Integer extractSeasonId(GameStatusModel statusRow) {
         if (statusRow == null || statusRow.getSeason() == null) return null;
+
+        Long seasonId = statusRow.getSeason().getSeasonId();
+        if (seasonId != null) return seasonId.intValue();
+        if (em == null) return null;
 
         Object pk = em.getEntityManagerFactory()
                       .getPersistenceUnitUtil()
@@ -432,7 +419,35 @@ public class GameService {
         return new Contribution(0,0,1, awayScore, homeScore, 0);
     }
 
-    private void applyDeltaScopedStrict(Integer seasonId, Integer categoryId, Integer teamId, Contribution d) {
+    private void updateExistingFinalScore(LockedGameContext ctx, GameModel scoreRow, int newHomeScore, int newAwayScore) {
+        Integer oldHome = scoreRow.getHome_score();
+        Integer oldAway = scoreRow.getAway_score();
+        if (oldHome == null || oldAway == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El score viejo está null (inconsistencia)");
+        }
+
+        if (oldHome == newHomeScore && oldAway == newAwayScore) {
+            return;
+        }
+
+        Contribution oldHomeC = contributionForHome(oldHome, oldAway);
+        Contribution oldAwayC = contributionForAway(oldHome, oldAway);
+        Contribution newHomeC = contributionForHome(newHomeScore, newAwayScore);
+        Contribution newAwayC = contributionForAway(newHomeScore, newAwayScore);
+
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(), newHomeC.minus(oldHomeC), 0);
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(), newAwayC.minus(oldAwayC), 0);
+
+        scoreRow.setHome_score(newHomeScore);
+        scoreRow.setAway_score(newAwayScore);
+        juegosrepo.save(scoreRow);
+    }
+
+    private void applyTeamDeltaStrict(Integer seasonId, Integer categoryId, Integer teamId, Contribution d, int gpDelta) {
+        if (gpDelta != 0) {
+            int rows = standrepo.incGpScoped(seasonId, categoryId, teamId, gpDelta);
+            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (gp) para teamId=" + teamId);
+        }
         if (d.wins != 0) {
             int rows = standrepo.incWinsScoped(seasonId, categoryId, teamId, d.wins);
             if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (wins) para teamId=" + teamId);
@@ -456,38 +471,6 @@ public class GameService {
         if (d.tablePoints != 0) {
             int rows = standrepo.incTablePointsScoped(seasonId, categoryId, teamId, d.tablePoints);
             if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (tablePoints) para teamId=" + teamId);
-        }
-    }
-
-    private void applyDeltaScopedOrLegacy(Integer seasonId, Integer categoryId, Integer teamId, Contribution d, int gpDelta) {
-        if (gpDelta != 0) {
-            int rows = standrepo.incGpScoped(seasonId, categoryId, teamId, gpDelta);
-            if (rows == 0) standrepo.incrementGp(teamId, gpDelta);
-        }
-
-        if (d.wins != 0) {
-            int rows = standrepo.incWinsScoped(seasonId, categoryId, teamId, d.wins);
-            if (rows == 0) standrepo.incrementWins(teamId, d.wins);
-        }
-        if (d.losses != 0) {
-            int rows = standrepo.incLossesScoped(seasonId, categoryId, teamId, d.losses);
-            if (rows == 0) standrepo.incrementLosses(teamId, d.losses);
-        }
-        if (d.draws != 0) {
-            int rows = standrepo.incDrawsScoped(seasonId, categoryId, teamId, d.draws);
-            if (rows == 0) standrepo.incrementDraws(teamId, d.draws);
-        }
-        if (d.pointsFor != 0) {
-            int rows = standrepo.incPointsForScoped(seasonId, categoryId, teamId, d.pointsFor);
-            if (rows == 0) standrepo.incrementPointsFor(teamId, d.pointsFor);
-        }
-        if (d.pointsAgainst != 0) {
-            int rows = standrepo.incPointsAgainstScoped(seasonId, categoryId, teamId, d.pointsAgainst);
-            if (rows == 0) standrepo.incrementPointsAgainst(teamId, d.pointsAgainst);
-        }
-        if (d.tablePoints != 0) {
-            int rows = standrepo.incTablePointsScoped(seasonId, categoryId, teamId, d.tablePoints);
-            if (rows == 0) standrepo.incrementTablePoints(teamId, d.tablePoints);
         }
     }
 }
