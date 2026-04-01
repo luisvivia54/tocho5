@@ -235,13 +235,15 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
         JOIN team t      ON t.team_id = st.team_id
         JOIN category c  ON c.category_id = st.category_id
 
-        WHERE (:leagueId IS NULL OR t.league_id = :leagueId)
+        WHERE (:seasonId IS NULL OR st.season_id = :seasonId)
+          AND (:leagueId IS NULL OR t.league_id = :leagueId)
           AND (:categoryCode IS NULL OR UPPER(c.code) = UPPER(:categoryCode))
           AND (:gender IS NULL OR UPPER(c.gender) = UPPER(:gender))
 
-        ORDER BY st.table_points DESC, t.name ASC
+        ORDER BY st.table_points DESC, t.name ASC, st.standing_id ASC
         """, nativeQuery = true)
   List<PointsRowProjection> findPointsList(
+      @Param("seasonId") Integer seasonId,
       @Param("leagueId") Integer leagueId,
       @Param("categoryCode") String categoryCode,
       @Param("gender") String gender

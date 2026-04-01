@@ -125,6 +125,22 @@ class GameServiceTest {
     }
 
     @Test
+    void saveGameReturnsExplicitErrorWhenStandingsHasDuplicateRows() {
+        GameStatusModel status = scheduledGame(100, 7, 9, 11, 3L);
+
+        when(juegostatus.findById(100)).thenReturn(Optional.of(status));
+        when(juegosrepo.findByIdForUpdate(100)).thenReturn(Optional.empty());
+        when(juegosrepo.save(any(GameModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(juegostatus.save(any(GameStatusModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(standrepo.incGpScoped(3, 11, 7, 1)).thenReturn(3);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.saveGame(score(100, 1, 0)));
+
+        assertEquals("Hay 3 filas standings duplicadas para teamId=7 seasonId=3 categoryId=11 al actualizar gp", ex.getReason());
+        verify(standrepo, never()).incrementGp(anyInt(), anyInt());
+    }
+
+    @Test
     void deleteGameAndRevertFailsInsteadOfTouchingLegacyRowsWhenScopedStandingIsMissing() {
         GameStatusModel status = finalGame(100, 7, 9, 11, 3L);
         GameModel storedScore = score(100, 21, 14);

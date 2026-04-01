@@ -17,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.ks.tocho5.model.GameModel;
@@ -39,6 +40,9 @@ public class GameService {
     @Autowired
     private JuegoStatus juegostatus;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
     @PersistenceContext
     private EntityManager em;
 
@@ -47,61 +51,7 @@ public class GameService {
     // =========================
     @Transactional
     public String saveGame(GameModel gamemodel) {
-        try {
-            validateIncomingScore(gamemodel);
-
-            LockedGameContext ctx = loadLockedGameContext(gamemodel.getGame_id());
-            Integer gameId = gamemodel.getGame_id();
-            int newHomeScore = gamemodel.getHome_score();
-            int newAwayScore = gamemodel.getAway_score();
-
-            if ("FINAL".equalsIgnoreCase(ctx.statusRow().getStatus())) {
-                GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
-                                "El partido ya estaba FINAL pero no tiene score guardado"));
-
-                Integer oldHome = scoreRow.getHome_score();
-                Integer oldAway = scoreRow.getAway_score();
-                if (oldHome == null || oldAway == null) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "El score viejo está null (inconsistencia)");
-                }
-
-                if (oldHome == newHomeScore && oldAway == newAwayScore) {
-                    return "OK";
-                }
-
-                updateExistingFinalScore(ctx, scoreRow, newHomeScore, newAwayScore);
-                return "OK";
-            }
-
-            if (!"SCHEDULED".equalsIgnoreCase(ctx.statusRow().getStatus())) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Solo se puede guardar score si el partido está SCHEDULED o FINAL");
-            }
-
-            GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId).orElseGet(() -> {
-                GameModel fresh = new GameModel();
-                fresh.setGame_id(gameId);
-                return fresh;
-            });
-
-            scoreRow.setHome_score(newHomeScore);
-            scoreRow.setAway_score(newAwayScore);
-            juegosrepo.save(scoreRow);
-
-            ctx.statusRow().setStatus("FINAL");
-            ctx.statusRow().setUpdated_at(LocalDateTime.now());
-            juegostatus.save(ctx.statusRow());
-
-            applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(),
-                    contributionForHome(newHomeScore, newAwayScore), 1);
-            applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(),
-                    contributionForAway(newHomeScore, newAwayScore), 1);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return e.getMessage();
-        }
+        doSaveGame(gamemodel);
         return "OK";
     }
 
@@ -120,7 +70,10 @@ public class GameService {
             Integer id = (g != null) ? g.getGame_id() : null;
             try {
                 if (g == null) throw new IllegalArgumentException("Item null en batch");
-                String resp = saveGame(g);
+                String resp = transactionTemplate.execute(status -> {
+                    doSaveGame(g);
+                    return "OK";
+                });
                 if (!"OK".equals(resp)) {
                     result.errors.put(id, resp);
                 } else {
@@ -335,6 +288,58 @@ public class GameService {
         }
     }
 
+    private void doSaveGame(GameModel gamemodel) {
+        validateIncomingScore(gamemodel);
+
+        LockedGameContext ctx = loadLockedGameContext(gamemodel.getGame_id());
+        Integer gameId = gamemodel.getGame_id();
+        int newHomeScore = gamemodel.getHome_score();
+        int newAwayScore = gamemodel.getAway_score();
+
+        if ("FINAL".equalsIgnoreCase(ctx.statusRow().getStatus())) {
+            GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                            "El partido ya estaba FINAL pero no tiene score guardado"));
+
+            Integer oldHome = scoreRow.getHome_score();
+            Integer oldAway = scoreRow.getAway_score();
+            if (oldHome == null || oldAway == null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "El score viejo está null (inconsistencia)");
+            }
+
+            if (oldHome == newHomeScore && oldAway == newAwayScore) {
+                return;
+            }
+
+            updateExistingFinalScore(ctx, scoreRow, newHomeScore, newAwayScore);
+            return;
+        }
+
+        if (!"SCHEDULED".equalsIgnoreCase(ctx.statusRow().getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Solo se puede guardar score si el partido está SCHEDULED o FINAL");
+        }
+
+        GameModel scoreRow = juegosrepo.findByIdForUpdate(gameId).orElseGet(() -> {
+            GameModel fresh = new GameModel();
+            fresh.setGame_id(gameId);
+            return fresh;
+        });
+
+        scoreRow.setHome_score(newHomeScore);
+        scoreRow.setAway_score(newAwayScore);
+        juegosrepo.save(scoreRow);
+
+        ctx.statusRow().setStatus("FINAL");
+        ctx.statusRow().setUpdated_at(LocalDateTime.now());
+        juegostatus.save(ctx.statusRow());
+
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(),
+                contributionForHome(newHomeScore, newAwayScore), 1);
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(),
+                contributionForAway(newHomeScore, newAwayScore), 1);
+    }
+
     private record LockedGameContext(
             GameStatusModel statusRow,
             Integer seasonId,
@@ -446,31 +451,56 @@ public class GameService {
     private void applyTeamDeltaStrict(Integer seasonId, Integer categoryId, Integer teamId, Contribution d, int gpDelta) {
         if (gpDelta != 0) {
             int rows = standrepo.incGpScoped(seasonId, categoryId, teamId, gpDelta);
-            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (gp) para teamId=" + teamId);
+            ensureExactlyOneStandingRowUpdated("gp", rows, seasonId, categoryId, teamId);
         }
         if (d.wins != 0) {
             int rows = standrepo.incWinsScoped(seasonId, categoryId, teamId, d.wins);
-            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (wins) para teamId=" + teamId);
+            ensureExactlyOneStandingRowUpdated("wins", rows, seasonId, categoryId, teamId);
         }
         if (d.losses != 0) {
             int rows = standrepo.incLossesScoped(seasonId, categoryId, teamId, d.losses);
-            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (losses) para teamId=" + teamId);
+            ensureExactlyOneStandingRowUpdated("losses", rows, seasonId, categoryId, teamId);
         }
         if (d.draws != 0) {
             int rows = standrepo.incDrawsScoped(seasonId, categoryId, teamId, d.draws);
-            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (draws) para teamId=" + teamId);
+            ensureExactlyOneStandingRowUpdated("draws", rows, seasonId, categoryId, teamId);
         }
         if (d.pointsFor != 0) {
             int rows = standrepo.incPointsForScoped(seasonId, categoryId, teamId, d.pointsFor);
-            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (pointsFor) para teamId=" + teamId);
+            ensureExactlyOneStandingRowUpdated("pointsFor", rows, seasonId, categoryId, teamId);
         }
         if (d.pointsAgainst != 0) {
             int rows = standrepo.incPointsAgainstScoped(seasonId, categoryId, teamId, d.pointsAgainst);
-            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (pointsAgainst) para teamId=" + teamId);
+            ensureExactlyOneStandingRowUpdated("pointsAgainst", rows, seasonId, categoryId, teamId);
         }
         if (d.tablePoints != 0) {
             int rows = standrepo.incTablePointsScoped(seasonId, categoryId, teamId, d.tablePoints);
-            if (rows == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "No existe fila standings (tablePoints) para teamId=" + teamId);
+            ensureExactlyOneStandingRowUpdated("tablePoints", rows, seasonId, categoryId, teamId);
         }
+    }
+
+    private void ensureExactlyOneStandingRowUpdated(
+            String field,
+            int rows,
+            Integer seasonId,
+            Integer categoryId,
+            Integer teamId
+    ) {
+        if (rows == 1) return;
+        if (rows == 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "No existe fila standings (" + field + ") para teamId=" + teamId
+                            + " seasonId=" + seasonId
+                            + " categoryId=" + categoryId
+            );
+        }
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Hay " + rows + " filas standings duplicadas para teamId=" + teamId
+                        + " seasonId=" + seasonId
+                        + " categoryId=" + categoryId
+                        + " al actualizar " + field
+        );
     }
 }

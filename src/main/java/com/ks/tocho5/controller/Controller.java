@@ -256,13 +256,18 @@ public class Controller {
 
     @GetMapping("/points")
     public List<PointsRowProjection> findTablePoints(
+            @RequestParam(name = "seasonId", required = false) Integer seasonId,
             @RequestParam(name = "leagueId", required = false) Integer leagueId,
             @RequestParam(name = "categoryCode", required = false) String categoryCode,
             @RequestParam(name = "gender", required = false) String gender
     ) {
         String code = normalizeFilterParam(categoryCode);
         String gen  = normalizeFilterParam(gender);
-        return standingrepo.findPointsList(leagueId, code, gen);
+        Integer resolvedSeasonId = seasonId;
+        if (resolvedSeasonId == null && leagueId != null) {
+            resolvedSeasonId = Math.toIntExact(seasonService.getCurrentSeasonId(leagueId.longValue()));
+        }
+        return standingrepo.findPointsList(resolvedSeasonId, leagueId, code, gen);
     }
 
     @PostMapping("/search")
