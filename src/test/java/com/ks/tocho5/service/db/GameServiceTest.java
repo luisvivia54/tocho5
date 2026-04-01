@@ -1,6 +1,7 @@
 package com.ks.tocho5.service.db;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -21,9 +22,12 @@ import org.springframework.web.server.ResponseStatusException;
 import com.ks.tocho5.model.GameModel;
 import com.ks.tocho5.model.GameStatusModel;
 import com.ks.tocho5.model.SeasonModel;
+import com.ks.tocho5.model.dto.GameCreateRequest;
 import com.ks.tocho5.repository.JuegoStatus;
 import com.ks.tocho5.repository.JuegosRepository;
 import com.ks.tocho5.repository.StandingTeamRepository;
+
+import jakarta.persistence.EntityManager;
 
 @ExtendWith(MockitoExtension.class)
 class GameServiceTest {
@@ -37,8 +41,57 @@ class GameServiceTest {
     @Mock
     private JuegoStatus juegostatus;
 
+    @Mock
+    private EntityManager em;
+
     @InjectMocks
     private GameService service;
+
+    @Test
+    void createScheduledGamePersistsVenueWhenProvided() {
+        SeasonModel season = new SeasonModel();
+        season.setSeasonId(3L);
+
+        when(em.getReference(SeasonModel.class, 3)).thenReturn(season);
+        when(juegostatus.save(any(GameStatusModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        GameStatusModel created = service.createScheduledGame(new GameCreateRequest(
+                null,
+                3L,
+                11,
+                7,
+                9,
+                "2026-01-24T18:00:00.000Z",
+                "J1",
+                "Cancha 1"
+        ));
+
+        assertEquals("SCHEDULED", created.getStatus());
+        assertEquals("Cancha 1", created.getVenue());
+    }
+
+    @Test
+    void createScheduledGameAllowsVenueToBeOmitted() {
+        SeasonModel season = new SeasonModel();
+        season.setSeasonId(3L);
+
+        when(em.getReference(SeasonModel.class, 3)).thenReturn(season);
+        when(juegostatus.save(any(GameStatusModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        GameStatusModel created = service.createScheduledGame(new GameCreateRequest(
+                null,
+                3L,
+                11,
+                7,
+                9,
+                "2026-01-24T18:00:00.000Z",
+                "J1",
+                null
+        ));
+
+        assertEquals("SCHEDULED", created.getStatus());
+        assertNull(created.getVenue());
+    }
 
     @Test
     void saveGameFinalizesScheduledMatchUsingScopedStandingsOnly() {

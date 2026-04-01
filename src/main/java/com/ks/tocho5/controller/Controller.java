@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import com.ks.tocho5.service.db.SeasonService;
@@ -198,10 +199,12 @@ public class Controller {
     @PostMapping("/games")
     public ResponseEntity<?> createGame(@RequestBody GameCreateRequest req) {
         GameStatusModel created = gameservice.createScheduledGame(req);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
-                "gameId", created.getGame_id(),
-                "status", created.getStatus()
-        ));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("gameId", created.getGame_id());
+        response.put("status", created.getStatus());
+        response.put("venue", created.getVenue());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
  // REEMPLAZA el método findAllFinalGames completo
