@@ -38,6 +38,7 @@ import com.ks.tocho5.model.TeamDetailDTOs.TeamDetailDTO;
 
 import com.ks.tocho5.model.CategoryDto;
 import com.ks.tocho5.model.TeamListProjection;
+import com.ks.tocho5.model.TeamSearchProjection;
 
 import com.ks.tocho5.model.PlayerGameStatsUpsertDTO;
 import com.ks.tocho5.model.PlayerSeasonStatsDTO;
@@ -174,6 +175,19 @@ public class Controller {
         String code = normalizeFilterParam(categoryCode);
         String gen  = normalizeFilterParam(gender);
         return repository.findTeamsList(leagueId, code, gen);
+    }
+
+    @GetMapping("/teams/search")
+    public List<TeamSearchProjection> searchTeams(
+            @RequestParam(name = "q") String query,
+            @RequestParam(name = "leagueId", required = false) Integer leagueId,
+            @RequestParam(name = "categoryCode", required = false) String categoryCode,
+            @RequestParam(name = "gender", required = false) String gender,
+            @RequestParam(name = "limit", required = false, defaultValue = "10") Integer limit
+    ) {
+        String code = normalizeFilterParam(categoryCode);
+        String gen  = normalizeFilterParam(gender);
+        return teamService.searchTeamsForAgent(query, leagueId, code, gen, limit);
     }
 
     // ================= PARTIDOS =================

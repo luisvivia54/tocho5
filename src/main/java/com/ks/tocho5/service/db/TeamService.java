@@ -6,6 +6,7 @@ import com.ks.tocho5.controller.Controller.UpdateTeamRequest;
 import com.ks.tocho5.model.AppUser;
 import com.ks.tocho5.model.EquiposModel;
 import com.ks.tocho5.model.EquiposStatsModel;
+import com.ks.tocho5.model.TeamSearchProjection;
 import com.ks.tocho5.repository.EquiposRepository;
 import com.ks.tocho5.repository.EquiposFiltroRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -139,6 +140,41 @@ public class TeamService {
         // TODO: implementar filtro real (leagueId/categoryCode/gender) con tus tablas
         // por ahora se regresa todo para mantener el comportamiento actual
     	 return equiposRepository.findActiveTeamsFiltered(leagueId, categoryCode, gender);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TeamSearchProjection> searchTeamsForAgent(
+            String query,
+            Integer leagueId,
+            String categoryCode,
+            String gender,
+            Integer limit
+    ) {
+        String normalizedQuery = normalizeSearchQuery(query);
+        if (normalizedQuery == null) {
+            return List.of();
+        }
+
+        return equiposRepository.searchActiveTeamsByName(
+                normalizedQuery,
+                leagueId,
+                categoryCode,
+                gender,
+                clampSearchLimit(limit)
+        );
+    }
+
+    private String normalizeSearchQuery(String query) {
+        if (query == null) return null;
+
+        String value = query.trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private int clampSearchLimit(Integer limit) {
+        if (limit == null) return 10;
+        if (limit < 1) return 1;
+        return Math.min(limit, 25);
     }
     
 
