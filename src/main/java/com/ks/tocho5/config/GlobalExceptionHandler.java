@@ -71,6 +71,14 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.CONFLICT, "Conflicto de datos");
   }
 
+  // -------- 503 (Servicio no configurado / dependencia caída) --------
+  @ExceptionHandler(IllegalStateException.class)
+  public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+    log.warn("Servicio no disponible: {}", ex.getMessage());
+    return build(HttpStatus.SERVICE_UNAVAILABLE,
+        ex.getMessage() == null ? "Servicio no disponible" : ex.getMessage());
+  }
+
   // -------- ResponseStatusException --------
   @ExceptionHandler(ResponseStatusException.class)
   public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException ex) {
