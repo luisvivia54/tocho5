@@ -37,7 +37,8 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(
       HttpSecurity http,
-      CorsConfigurationSource corsConfigurationSource
+      CorsConfigurationSource corsConfigurationSource,
+      SecurityErrorHandlers errorHandlers
   ) throws Exception {
 
     http
@@ -69,6 +70,9 @@ public class SecurityConfig {
 
         // ========= Actuator / Health (si se usa) =========
         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
+        // ========= Diagnóstico público =========
+        .requestMatchers(HttpMethod.GET, "/api/_debug/ping").permitAll()
 
         // ========= ADMIN (solo rol admin) =========
         .requestMatchers("/api/admin/**").hasRole("admin")
@@ -110,6 +114,14 @@ public class SecurityConfig {
 
       .oauth2ResourceServer(oauth2 -> oauth2
         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+        .authenticationEntryPoint(errorHandlers.entryPoint())
+        .accessDeniedHandler(errorHandlers.accessDeniedHandler())
+      )
+
+      // También para respuestas 401/403 que no pasan por el resource server
+      .exceptionHandling(eh -> eh
+        .authenticationEntryPoint(errorHandlers.entryPoint())
+        .accessDeniedHandler(errorHandlers.accessDeniedHandler())
       );
 
     return http.build();
