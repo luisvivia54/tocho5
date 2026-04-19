@@ -327,25 +327,24 @@ public class Controller {
     // ================= ACTUALIZAR PARTIDO (FINALIZAR) =================
 
     @PostMapping("/partido/update")
+    @PreAuthorize("hasRole('admin')")
     public Object partidoupdate(@RequestBody JsonNode body) {
-        try {
-            if (body.isArray()) {
-                List<GameModel> batch = objectMapper.convertValue(
-                        body,
-                        new TypeReference<List<GameModel>>() {}
-                );
-                return gameservice.saveGames(batch);
-            }
-
-            GameModel datosEntrada = objectMapper.convertValue(body, GameModel.class);
-            String respSave = gameservice.saveGame(datosEntrada);
-            if ("OK".equals(respSave)) return respSave;
-            return "Algo salio mal";
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "error " + e.getMessage();
+        if (body == null || body.isNull()) {
+            throw new IllegalArgumentException("Body vacío");
         }
+        if (body.isArray()) {
+            List<GameModel> batch = objectMapper.convertValue(
+                    body,
+                    new TypeReference<List<GameModel>>() {}
+            );
+            return gameservice.saveGames(batch);
+        }
+
+        GameModel datosEntrada = objectMapper.convertValue(body, GameModel.class);
+        String respSave = gameservice.saveGame(datosEntrada);
+        if ("OK".equals(respSave)) return respSave;
+        // Cualquier otro caso se traduce a 400 por el handler
+        throw new RuntimeException("No se pudo guardar el partido");
     }
 
     // ================== ✅ STATS POR PARTIDO (UPSERT) ==================

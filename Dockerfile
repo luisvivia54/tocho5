@@ -14,8 +14,14 @@ RUN mvn -B -DskipTests package
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
+# Usuario no-root para reducir superficie de ataque
+RUN addgroup -S app && adduser -S -G app app
+
 # copia el JAR construido
 COPY --from=build /build/target/*.jar /app/app.jar
+RUN chown -R app:app /app
+
+USER app
 
 EXPOSE 8080
 ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
