@@ -638,6 +638,23 @@ public class Controller {
         return Map.of("seasonId", seasonId);
     }
 
+    // POST /api/seasons/rollover
+    // Inicia una nueva temporada para una liga (torneo), mueve a ella a todos
+    // los equipos activos de esa liga, siembra sus posiciones en ceros y la deja
+    // activa. Las temporadas pasadas quedan intactas. SOLO admin.
+    @PostMapping("/seasons/rollover")
+    @PreAuthorize("hasRole('admin')")
+    public ResponseEntity<?> rolloverSeason(@RequestBody SeasonRolloverRequest req) {
+        if (req == null || req.leagueId() == null) {
+            return ResponseEntity.badRequest().body("Falta leagueId");
+        }
+        if (req.name() == null || req.name().isBlank()) {
+            return ResponseEntity.badRequest().body("Falta name");
+        }
+        SeasonRolloverResult result = seasonService.startSeasonRollover(req.leagueId(), req.name());
+        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+    }
+
     // ================= DELETE SCHEDULED (LEGACY) =================
     // OJO: esto solo borra SCHEDULED (tu lógica actual)
     @DeleteMapping("/games/{gameId}")
