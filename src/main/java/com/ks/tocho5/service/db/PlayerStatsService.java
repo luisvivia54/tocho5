@@ -69,7 +69,9 @@ public class PlayerStatsService {
 
         return rows.stream()
                 .map(r -> new PlayerSeasonStatsDTO(
+                        r.getPersonKey(),
                         r.getPlayerId(),
+                        r.getTeamId(),
                         r.getFullName(),
                         nz(r.getTd()),
                         nz(r.getPassTd()),
