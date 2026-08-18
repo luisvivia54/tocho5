@@ -65,7 +65,7 @@ public class PlayerStatsService {
                 ? seasonIdOrNull
                 : seasonService.getCurrentSeasonId(leagueId);
 
-        List<PlayerSeasonStatsProjection> rows = spgRepo.leaderboardBySeason(seasonId);
+        List<PlayerSeasonStatsProjection> rows = spgRepo.leaderboardBySeason(seasonId, leagueId);
 
         return rows.stream()
                 .map(r -> new PlayerSeasonStatsDTO(
