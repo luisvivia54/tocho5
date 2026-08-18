@@ -27,6 +27,7 @@ import com.ks.tocho5.model.dto.GameCreateRequest;
 import com.ks.tocho5.repository.JuegoStatus;
 import com.ks.tocho5.repository.JuegosRepository;
 import com.ks.tocho5.repository.StandingTeamRepository;
+import com.ks.tocho5.repository.StatPlayerGameRepository;
 
 @Service
 public class GameService {
@@ -39,6 +40,9 @@ public class GameService {
 
     @Autowired
     private JuegoStatus juegostatus;
+
+    @Autowired
+    private StatPlayerGameRepository spgRepo;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -156,6 +160,9 @@ public class GameService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Solo se puede borrar si está SCHEDULED");
         }
 
+        // limpiar stats de jugadores por si el partido tuviera alguna
+        spgRepo.deleteByGameId(id.longValue());
+
         try {
             juegostatus.delete(game);
         } catch (DataIntegrityViolationException fk) {
@@ -254,6 +261,9 @@ public class GameService {
 
         applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(), homeC, -1);
         applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(), awayC, -1);
+
+        // revertir stats individuales de jugadores de este partido
+        spgRepo.deleteByGameId((long) id);
 
         ctx.statusRow().setStatus("CANCELLED");
         ctx.statusRow().setUpdated_at(LocalDateTime.now());

@@ -3,6 +3,7 @@ package com.ks.tocho5.repository;
 import com.ks.tocho5.model.StatPlayerGameModel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.ks.tocho5.model.PlayerSeasonStatsProjection;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
@@ -11,7 +12,13 @@ import java.util.Optional;
 
 public interface StatPlayerGameRepository extends JpaRepository<StatPlayerGameModel, Long> {
     Optional<StatPlayerGameModel> findByGameIdAndTeamIdAndPlayerId(Long gameId, Long teamId, Long playerId);
-    
+
+    // Borra todas las stats de jugadores de un partido (se usa al borrar/revertir
+    // el partido, para que sus stats no sigan contando en el leaderboard).
+    @Modifying
+    @Query("delete from StatPlayerGameModel s where s.gameId = :gameId")
+    int deleteByGameId(@Param("gameId") Long gameId);
+
     // Leaderboard agrupado por PERSONA (hash de la CURP) y equipo.
     // personKey = md5(curp normalizada): permite al front juntar al mismo jugador
     // que aparece en varios equipos, sin exponer la CURP real. Cada fila sigue
@@ -41,6 +48,7 @@ public interface StatPlayerGameRepository extends JpaRepository<StatPlayerGameMo
     	        FROM public.stat_player_game spg
     	        JOIN public.game g ON g.game_id = spg.game_id
     	        WHERE g.season_id = :seasonId
+    	          AND g.status = 'FINAL'
     	    ) s ON s.player_id = p.player_id AND s.team_id = p.team_id
     	    WHERE t.league_id = :leagueId
     	      AND t.is_active = true
