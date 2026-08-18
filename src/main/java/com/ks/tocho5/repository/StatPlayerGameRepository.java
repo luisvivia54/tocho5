@@ -24,7 +24,7 @@ public interface StatPlayerGameRepository extends JpaRepository<StatPlayerGameMo
     	      MAX(p.full_name)                AS fullName,
     	      COALESCE(SUM(spg.td), 0)        AS td,
     	      COALESCE(SUM(spg.pass_td), 0)   AS passTd,
-    	      COALESCE(SUM(spg.intercep), 0)  AS intercep,
+    	      COALESCE(SUM(spg.interceptions), 0)  AS intercep,
     	      COALESCE(SUM(spg.sacks), 0)     AS sacks
     	    FROM public.stat_player_game spg
     	    JOIN public.game g   ON g.game_id = spg.game_id

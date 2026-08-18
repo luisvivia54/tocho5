@@ -28,7 +28,7 @@ public class StatPlayerGameModel {
     @Column(name = "pass_td")
     private Integer passTd;
 
-    @Column(name = "intercep")
+    @Column(name = "interceptions")
     private Integer intercep;
 
     @Column(name = "sacks")
