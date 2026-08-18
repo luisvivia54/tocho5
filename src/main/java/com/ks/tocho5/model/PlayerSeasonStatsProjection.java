@@ -6,6 +6,8 @@ public interface PlayerSeasonStatsProjection {
     Long getPlayerId();
     Long getTeamId();
     String getFullName();
+    String getPhotoUrl();
+    Integer getNumber();
     Integer getTd();
     Integer getPassTd();
     Integer getIntercep();

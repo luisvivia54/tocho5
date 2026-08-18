@@ -73,6 +73,8 @@ public class PlayerStatsService {
                         r.getPlayerId(),
                         r.getTeamId(),
                         r.getFullName(),
+                        r.getPhotoUrl(),
+                        r.getNumber(),
                         nz(r.getTd()),
                         nz(r.getPassTd()),
                         nz(r.getIntercep()),

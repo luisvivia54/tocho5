@@ -5,6 +5,8 @@ public record PlayerSeasonStatsDTO(
         Long playerId,
         Long teamId,
         String fullName,
+        String photoUrl,
+        Integer number,
         Integer td,
         Integer passTd,
         Integer intercep,
