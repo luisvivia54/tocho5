@@ -11,6 +11,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface StandingTeamRepository extends JpaRepository<StandingTeamModel, Integer> {
 
+  // ================== SEED (crea la fila en ceros si no existe) ==================
+  // Garantiza que exista la fila (season, category, team) antes de sumarle un
+  // partido. Idempotente gracias al ON CONFLICT. Se usa al FINALIZAR para que
+  // un equipo agregado después del rollover no truene con 409.
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Transactional
+  @Query(value = """
+         INSERT INTO public.standing_team
+           (season_id, category_id, team_id, gp, wins, losses, draws,
+            points_for, points_against, table_points)
+         VALUES (:seasonId, :categoryId, :teamId, 0, 0, 0, 0, 0, 0, 0)
+         ON CONFLICT (season_id, category_id, team_id) DO NOTHING
+         """, nativeQuery = true)
+  int ensureStandingRow(@Param("seasonId") Integer seasonId,
+                        @Param("categoryId") Integer categoryId,
+                        @Param("teamId") Integer teamId);
+
   // ================== UPDATES (LEGACY: SOLO team_id) ==================
   // ⚠️ OJO: estos pueden afectar otras seasons/categories si existen.
   // Los dejamos para no romper tu código actual.

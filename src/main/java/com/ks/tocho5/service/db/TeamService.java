@@ -46,7 +46,7 @@ public class TeamService {
             throw new RuntimeException("Solo capitanes o admins pueden crear equipos");
         }
 
-        int currentTeams = equiposRepository.countByCaptain(user);
+        int currentTeams = equiposRepository.countByCaptainAndIsActiveTrue(user);
         if (currentTeams >= user.getMaxTeamsAllowed()) {
             throw new RuntimeException("Ya alcanzaste tu límite de equipos (" + user.getMaxTeamsAllowed() + ")");
         }

@@ -344,6 +344,11 @@ public class GameService {
         ctx.statusRow().setUpdated_at(LocalDateTime.now());
         juegostatus.save(ctx.statusRow());
 
+        // Sembrar la fila de standings si el equipo no la tenía (p.ej. agregado
+        // después del rollover), para no truncar el finalizar con 409.
+        standrepo.ensureStandingRow(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId());
+        standrepo.ensureStandingRow(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId());
+
         applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(),
                 contributionForHome(newHomeScore, newAwayScore), 1);
         applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(),
