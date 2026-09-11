@@ -29,7 +29,9 @@ public class CategoryService {
                         c.getLeagueId(),
                         c.getName(),
                         c.getCode(),
-                        c.getGender()
+                        c.getGender(),
+                        c.getLevelOrder(),
+                        c.getIsActive()
                 ))
                 .toList();
     }

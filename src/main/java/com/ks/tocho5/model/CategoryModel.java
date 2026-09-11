@@ -25,6 +25,14 @@ public class CategoryModel {
     @Column(name = "gender")
     private String gender;
 
+    // Division dentro de la rama: "A" | "B" para Libres, "0" para el resto.
+    // Es VARCHAR en BD: NO usar para ordenar numericamente ni comparar con numeros.
+    @Column(name = "level_order")
+    private String levelOrder;
+
+    @Column(name = "is_active")
+    private Boolean isActive;
+
     public CategoryModel() {
     }
 
@@ -68,5 +76,21 @@ public class CategoryModel {
 
     public void setGender(String gender) {
         this.gender = gender;
+    }
+
+    public String getLevelOrder() {
+        return levelOrder;
+    }
+
+    public void setLevelOrder(String levelOrder) {
+        this.levelOrder = levelOrder;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
 }

@@ -16,7 +16,7 @@ public interface CategoryRepository extends JpaRepository<CategoryModel, Long> {
 	          from CategoryModel c
 	         where (:leagueId is null or c.leagueId = :leagueId)
 	           and (:gender  is null or c.gender  = :gender)
-	         order by c.code asc, c.name asc
+	         order by c.code asc, c.name asc, c.levelOrder asc
 	    """)
 	    List<CategoryModel> findFiltered(
 	            @Param("leagueId") Long leagueId,
