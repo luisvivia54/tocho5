@@ -33,6 +33,11 @@ public class GameStatusModel {
   @Column(name = "category_id")
   private Integer category_id;
 
+  // Partidos cruzados A vs B: division del VISITANTE.
+  // null = partido normal, el visitante pertenece a la misma categoria que el local.
+  @Column(name = "category_id_2")
+  private Integer category_id_2;
+
   @Column(name = "home_team_id")
   private Integer home_team_id;
 
@@ -84,6 +89,16 @@ public class GameStatusModel {
   )
   private CategoryModel category;
 
+  @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(
+      name = "category_id_2",
+      referencedColumnName = "category_id",
+      insertable = false,
+      updatable = false
+  )
+  private CategoryModel category2;
+
   // ===== Getters / Setters =====
 
   public Integer getGame_id() { return game_id; }
@@ -125,6 +140,12 @@ public class GameStatusModel {
 
   public CategoryModel getCategory() { return category; }
   public void setCategory(CategoryModel category) { this.category = category; }
+
+  public Integer getCategory_id_2() { return category_id_2; }
+  public void setCategory_id_2(Integer category_id_2) { this.category_id_2 = category_id_2; }
+
+  public CategoryModel getCategory2() { return category2; }
+  public void setCategory2(CategoryModel category2) { this.category2 = category2; }
 
   // ---- Getters “de nombre” (para JSON bonito) ----
   @com.fasterxml.jackson.annotation.JsonProperty("home_team")

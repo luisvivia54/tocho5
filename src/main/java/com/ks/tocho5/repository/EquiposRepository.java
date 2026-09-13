@@ -29,7 +29,8 @@ public interface EquiposRepository extends JpaRepository<EquiposModel, Long> {
           en.category_id   AS categoryId,
           c.name           AS categoryName,
           c.code           AS categoryCode,
-          c.gender         AS categoryGender
+          c.gender         AS categoryGender,
+          c.level_order    AS categoryLevelOrder
 
         FROM team t
 

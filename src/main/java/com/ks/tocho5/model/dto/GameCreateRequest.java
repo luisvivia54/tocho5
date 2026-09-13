@@ -17,6 +17,11 @@ public record GameCreateRequest(
         @JsonAlias({"category_id", "categoryId"})
         Integer categoryId,
 
+        // Solo para partidos cruzados A vs B: division del visitante.
+        // Se manda null (o se omite) en un partido normal.
+        @JsonAlias({"category_id_2", "categoryId2"})
+        Integer categoryId2,
+
         @JsonAlias({"home_team_id", "homeTeamId"})
         Integer homeTeamId,
 

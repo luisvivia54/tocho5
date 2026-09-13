@@ -45,6 +45,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
+       left join fetch g.category2
        join fetch g.season s
       where upper(g.status) = 'SCHEDULED'
       order by g.match_date_utc asc
@@ -57,6 +58,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
+       left join fetch g.category2
       where upper(g.status) = upper(:status)
       order by g.match_date_utc desc
   """)
@@ -72,6 +74,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
+       left join fetch g.category2
        join fetch g.season s
       where upper(g.status) = 'FINAL'
         and (:leagueId is null or c.leagueId = :leagueId)
@@ -93,6 +96,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
+       left join fetch g.category2
       where g.game_id = :gameId
   """)
   GameStatusModel findOneWithTeams(@Param("gameId") Integer gameId);
@@ -111,6 +115,7 @@ public interface JuegoStatus extends JpaRepository<GameStatusModel, Integer> {
        join fetch g.homeTeam
        join fetch g.awayTeam
        join fetch g.category c
+       left join fetch g.category2
        join fetch g.season s
       where upper(g.status) = 'SCHEDULED'
         and (:leagueId is null or c.leagueId = :leagueId)

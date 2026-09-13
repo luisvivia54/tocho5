@@ -246,7 +246,8 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
           t.name            AS teamName,
 
           c.code            AS categoryCode,
-          c.gender          AS gender
+          c.gender          AS gender,
+          c.level_order     AS levelOrder
 
         FROM standing_team st
         JOIN team t      ON t.team_id = st.team_id

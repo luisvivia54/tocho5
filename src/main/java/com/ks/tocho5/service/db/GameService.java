@@ -122,6 +122,7 @@ public class GameService {
         g.setSeason(seasonRef);
 
         g.setCategory_id(req.categoryId());
+        g.setCategory_id_2(normalizeSecondCategory(req.categoryId2(), req.categoryId()));
         g.setHome_team_id(req.homeTeamId());
         g.setAway_team_id(req.awayTeamId());
 
@@ -136,6 +137,17 @@ public class GameService {
 
         g.setUpdated_at(LocalDateTime.now());
         return juegostatus.save(g);
+    }
+
+    /**
+     * La segunda categoria solo tiene sentido si existe y es distinta de la del local.
+     * Un 0 (tipico de un front que manda Number(x) || 0) o una categoria repetida
+     * se guardan como null, para que el partido cuente como normal.
+     */
+    private Integer normalizeSecondCategory(Integer categoryId2, Integer categoryId) {
+        if (categoryId2 == null || categoryId2 < 1) return null;
+        if (categoryId2.equals(categoryId)) return null;
+        return categoryId2;
     }
 
     // =========================
@@ -260,7 +272,7 @@ public class GameService {
         Contribution awayC = contributionForAway(oldHome, oldAway).negate();
 
         applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(), homeC, -1);
-        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(), awayC, -1);
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.awayCategoryId(), ctx.awayTeamId(), awayC, -1);
 
         // revertir stats individuales de jugadores de este partido
         spgRepo.deleteByGameId((long) id);
@@ -347,18 +359,19 @@ public class GameService {
         // Sembrar la fila de standings si el equipo no la tenía (p.ej. agregado
         // después del rollover), para no truncar el finalizar con 409.
         standrepo.ensureStandingRow(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId());
-        standrepo.ensureStandingRow(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId());
+        standrepo.ensureStandingRow(ctx.seasonId(), ctx.awayCategoryId(), ctx.awayTeamId());
 
         applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(),
                 contributionForHome(newHomeScore, newAwayScore), 1);
-        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(),
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.awayCategoryId(), ctx.awayTeamId(),
                 contributionForAway(newHomeScore, newAwayScore), 1);
     }
 
     private record LockedGameContext(
             GameStatusModel statusRow,
             Integer seasonId,
-            Integer categoryId,
+            Integer categoryId,      // division del LOCAL
+            Integer awayCategoryId,  // division del VISITANTE (igual a categoryId si no es cruzado)
             Integer homeTeamId,
             Integer awayTeamId
     ) {}
@@ -379,7 +392,12 @@ public class GameService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No pude obtener seasonId del partido");
         }
 
-        return new LockedGameContext(statusRow, seasonId, categoryId, homeTeamId, awayTeamId);
+        // En un cruzado A vs B cada equipo suma en la tabla de SU division. Si no hay
+        // segunda categoria (el caso de todos los partidos normales), ambos usan la misma.
+        Integer categoryId2 = normalizeSecondCategory(statusRow.getCategory_id_2(), categoryId);
+        Integer awayCategoryId = (categoryId2 != null) ? categoryId2 : categoryId;
+
+        return new LockedGameContext(statusRow, seasonId, categoryId, awayCategoryId, homeTeamId, awayTeamId);
     }
 
     private Integer extractSeasonId(GameStatusModel statusRow) {
@@ -456,7 +474,7 @@ public class GameService {
         Contribution newAwayC = contributionForAway(newHomeScore, newAwayScore);
 
         applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.homeTeamId(), newHomeC.minus(oldHomeC), 0);
-        applyTeamDeltaStrict(ctx.seasonId(), ctx.categoryId(), ctx.awayTeamId(), newAwayC.minus(oldAwayC), 0);
+        applyTeamDeltaStrict(ctx.seasonId(), ctx.awayCategoryId(), ctx.awayTeamId(), newAwayC.minus(oldAwayC), 0);
 
         scoreRow.setHome_score(newHomeScore);
         scoreRow.setAway_score(newAwayScore);
