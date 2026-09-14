@@ -59,6 +59,7 @@ class GameServiceTest {
                 null,
                 3L,
                 11,
+                null, // categoryId2: partido normal, no cruzado
                 7,
                 9,
                 "2026-01-24T18:00:00.000Z",
@@ -82,6 +83,7 @@ class GameServiceTest {
                 null,
                 3L,
                 11,
+                null, // categoryId2: partido normal, no cruzado
                 7,
                 9,
                 "2026-01-24T18:00:00.000Z",
@@ -209,6 +211,65 @@ class GameServiceTest {
         verify(standrepo, never()).incrementLosses(anyInt(), anyInt());
     }
 
+    @Test
+    void saveGameSendsEachTeamToItsOwnDivisionOnCrossDivisionMatch() {
+        // Local en la division 11 (A), visitante en la 20 (B).
+        GameStatusModel status = crossDivisionGame(100, 7, 9, 11, 20, 3L);
+
+        when(juegostatus.findById(100)).thenReturn(Optional.of(status));
+        when(juegosrepo.findByIdForUpdate(100)).thenReturn(Optional.empty());
+        when(juegosrepo.save(any(GameModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(juegostatus.save(any(GameStatusModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(standrepo.incGpScoped(3, 11, 7, 1)).thenReturn(1);
+        when(standrepo.incGpScoped(3, 20, 9, 1)).thenReturn(1);
+        when(standrepo.incWinsScoped(3, 11, 7, 1)).thenReturn(1);
+        when(standrepo.incLossesScoped(3, 20, 9, 1)).thenReturn(1);
+        when(standrepo.incPointsForScoped(3, 11, 7, 21)).thenReturn(1);
+        when(standrepo.incPointsForScoped(3, 20, 9, 14)).thenReturn(1);
+        when(standrepo.incPointsAgainstScoped(3, 11, 7, 14)).thenReturn(1);
+        when(standrepo.incPointsAgainstScoped(3, 20, 9, 21)).thenReturn(1);
+        when(standrepo.incTablePointsScoped(3, 11, 7, 3)).thenReturn(1);
+
+        assertEquals("OK", service.saveGame(score(100, 21, 14)));
+
+        // La fila de standings del visitante se siembra en SU division, no en la del local.
+        verify(standrepo).ensureStandingRow(3, 11, 7);
+        verify(standrepo).ensureStandingRow(3, 20, 9);
+
+        verify(standrepo).incGpScoped(3, 20, 9, 1);
+        verify(standrepo).incLossesScoped(3, 20, 9, 1);
+        // Lo que rompia antes: el visitante sumaba en la categoria del local.
+        verify(standrepo, never()).incGpScoped(3, 11, 9, 1);
+        verify(standrepo, never()).incLossesScoped(3, 11, 9, 1);
+    }
+
+    @Test
+    void saveGameTreatsRepeatedSecondCategoryAsNormalMatch() {
+        // category_id_2 igual a la del local no es un cruzado: ambos van a la misma tabla.
+        GameStatusModel status = crossDivisionGame(100, 7, 9, 11, 11, 3L);
+
+        when(juegostatus.findById(100)).thenReturn(Optional.of(status));
+        when(juegosrepo.findByIdForUpdate(100)).thenReturn(Optional.empty());
+        when(juegosrepo.save(any(GameModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(juegostatus.save(any(GameStatusModel.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(standrepo.incGpScoped(3, 11, 7, 1)).thenReturn(1);
+        when(standrepo.incGpScoped(3, 11, 9, 1)).thenReturn(1);
+        when(standrepo.incWinsScoped(3, 11, 7, 1)).thenReturn(1);
+        when(standrepo.incLossesScoped(3, 11, 9, 1)).thenReturn(1);
+        when(standrepo.incPointsForScoped(3, 11, 7, 21)).thenReturn(1);
+        when(standrepo.incPointsForScoped(3, 11, 9, 14)).thenReturn(1);
+        when(standrepo.incPointsAgainstScoped(3, 11, 7, 14)).thenReturn(1);
+        when(standrepo.incPointsAgainstScoped(3, 11, 9, 21)).thenReturn(1);
+        when(standrepo.incTablePointsScoped(3, 11, 7, 3)).thenReturn(1);
+
+        assertEquals("OK", service.saveGame(score(100, 21, 14)));
+
+        verify(standrepo).ensureStandingRow(3, 11, 9);
+        verify(standrepo).incGpScoped(3, 11, 9, 1);
+    }
+
     private GameStatusModel scheduledGame(int gameId, int homeTeamId, int awayTeamId, int categoryId, long seasonId) {
         GameStatusModel game = baseGame(gameId, homeTeamId, awayTeamId, categoryId, seasonId);
         game.setStatus("SCHEDULED");
@@ -218,6 +279,14 @@ class GameServiceTest {
     private GameStatusModel finalGame(int gameId, int homeTeamId, int awayTeamId, int categoryId, long seasonId) {
         GameStatusModel game = baseGame(gameId, homeTeamId, awayTeamId, categoryId, seasonId);
         game.setStatus("FINAL");
+        return game;
+    }
+
+    private GameStatusModel crossDivisionGame(
+            int gameId, int homeTeamId, int awayTeamId, int categoryId, int categoryId2, long seasonId) {
+        GameStatusModel game = baseGame(gameId, homeTeamId, awayTeamId, categoryId, seasonId);
+        game.setCategory_id_2(categoryId2);
+        game.setStatus("SCHEDULED");
         return game;
     }
 

@@ -108,6 +108,7 @@ public interface EquiposRepository extends JpaRepository<EquiposModel, Long> {
             c.name             AS categoryName,
             c.code             AS categoryCode,
             c.gender           AS categoryGender,
+            c.level_order      AS categoryLevelOrder,
             LOWER(TRANSLATE(COALESCE(t.name, ''),
               'ÁÀÂÄÃÅáàâäãåÉÈÊËéèêëÍÌÎÏíìîïÓÒÔÖÕóòôöõÚÙÛÜúùûüÑñÇç',
               'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuNnCc'
@@ -144,6 +145,7 @@ public interface EquiposRepository extends JpaRepository<EquiposModel, Long> {
           tc.categoryName     AS categoryName,
           tc.categoryCode     AS categoryCode,
           tc.categoryGender   AS categoryGender,
+          tc.categoryLevelOrder AS categoryLevelOrder,
           CASE
             WHEN tc.nameNorm = s.q_norm THEN 0
             WHEN tc.shortNameNorm = s.q_norm THEN 1
