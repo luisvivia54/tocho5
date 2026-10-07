@@ -253,7 +253,8 @@ public interface StandingTeamRepository extends JpaRepository<StandingTeamModel,
         JOIN team t      ON t.team_id = st.team_id
         JOIN category c  ON c.category_id = st.category_id
 
-        WHERE (:seasonId IS NULL OR st.season_id = :seasonId)
+        WHERE t.is_active = true
+          AND (:seasonId IS NULL OR st.season_id = :seasonId)
           AND (:leagueId IS NULL OR t.league_id = :leagueId)
           AND (:categoryCode IS NULL OR UPPER(c.code) = UPPER(:categoryCode))
           AND (:gender IS NULL OR UPPER(c.gender) = UPPER(:gender))
