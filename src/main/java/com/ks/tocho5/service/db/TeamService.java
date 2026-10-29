@@ -3,6 +3,12 @@ package com.ks.tocho5.service.db;
 
 import com.ks.tocho5.controller.Controller.CreateTeamRequest;
 import com.ks.tocho5.controller.Controller.UpdateTeamRequest;
+import com.ks.tocho5.controller.Controller.AdminUpdateTeamRequest;
+import com.ks.tocho5.model.CategoryModel;
+import com.ks.tocho5.repository.CategoryRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import com.ks.tocho5.model.AppUser;
 import com.ks.tocho5.model.EquiposModel;
 import com.ks.tocho5.model.EquiposStatsModel;
@@ -13,7 +19,10 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -22,13 +31,19 @@ public class TeamService {
     private final AppUserService appUserService;
     private final EquiposRepository equiposRepository;
     private final EquiposFiltroRepository equiposFiltroRepository;
+    private final CategoryRepository categoryRepository;
+    private final JdbcTemplate jdbc;
 
     public TeamService(AppUserService appUserService,
                        EquiposRepository equiposRepository,
-                       EquiposFiltroRepository equiposFiltroRepository) {
+                       EquiposFiltroRepository equiposFiltroRepository,
+                       CategoryRepository categoryRepository,
+                       JdbcTemplate jdbc) {
         this.appUserService = appUserService;
         this.equiposRepository = equiposRepository;
         this.equiposFiltroRepository = equiposFiltroRepository;
+        this.categoryRepository = categoryRepository;
+        this.jdbc = jdbc;
     }
 
     private AppUser getCurrentUser(Jwt jwt) {
@@ -67,10 +82,15 @@ public class TeamService {
 
         // 2) Crear inscripción en team_enrollment / equipos_stats
         if (req.seasonId() != null && req.categoryId() != null) {
+            // Solo el admin decide la division: un capitan siempre entra en la A.
+            Integer categoryId = user.isAdmin()
+                    ? req.categoryId()
+                    : resolveDivisionForCaptain(req.categoryId());
+
             EquiposStatsModel enrollment = new EquiposStatsModel();
             enrollment.setTeam_id(team.getTeamId());
             enrollment.setSeason_id(req.seasonId());
-            enrollment.setCategory_id(req.categoryId());
+            enrollment.setCategory_id(categoryId);
             equiposFiltroRepository.save(enrollment);
         }
 
@@ -121,6 +141,173 @@ public class TeamService {
         }
 
         return equiposRepository.save(team);
+    }
+
+    // ================= DIVISIONES A/B =================
+
+    /** "A" / "B" para ramas divididas; null cuando la categoria no tiene division ("0"). */
+    private static String divisionOf(CategoryModel c) {
+        String raw = c.getLevelOrder() == null ? "" : c.getLevelOrder().trim();
+        if (raw.isEmpty() || "0".equals(raw)) return null;
+        return raw.toUpperCase(Locale.ROOT);
+    }
+
+    /** Misma liga, mismo code y mismo genero: solo cambia la division. */
+    private static boolean sameBranch(CategoryModel a, CategoryModel b) {
+        return Objects.equals(a.getLeagueId(), b.getLeagueId())
+                && a.getCode() != null && a.getCode().equalsIgnoreCase(b.getCode())
+                && Objects.equals(
+                        a.getGender() == null ? null : a.getGender().toUpperCase(Locale.ROOT),
+                        b.getGender() == null ? null : b.getGender().toUpperCase(Locale.ROOT));
+    }
+
+    /**
+     * Un capitan no puede inscribirse en la B: si la categoria elegida es una
+     * division distinta de la A, se cambia por la A de esa misma rama.
+     */
+    private Integer resolveDivisionForCaptain(Integer categoryId) {
+        CategoryModel chosen = categoryRepository.findById(categoryId.longValue())
+                .orElseThrow(() -> new IllegalArgumentException("La categoría elegida no existe"));
+
+        String division = divisionOf(chosen);
+        if (division == null || "A".equals(division)) {
+            return categoryId;
+        }
+
+        return categoryRepository.findAll().stream()
+                .filter(c -> sameBranch(c, chosen) && "A".equals(divisionOf(c)))
+                .map(c -> c.getId().intValue())
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No se encontró la División A de esta categoría. Contacta a la liga."));
+    }
+
+    /**
+     * Edicion de un equipo desde el panel admin: nombre, nombre corto, colores
+     * y division (A/B) de su inscripcion actual.
+     *
+     * Reglas para cambiar de division:
+     *  - solo entre divisiones de la misma rama (misma liga, code y genero);
+     *  - no se permite si el equipo ya tiene partidos (no cancelados) en esa
+     *    temporada, para no dejar partidos ni tabla en la division equivocada.
+     */
+    @Transactional
+    public Map<String, Object> adminUpdateTeam(Long teamId, AdminUpdateTeamRequest req) {
+        if (req == null) {
+            throw new IllegalArgumentException("Faltan los datos del equipo");
+        }
+
+        EquiposModel team = equiposRepository.findById(teamId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipo no encontrado"));
+
+        if (req.name() != null) {
+            if (req.name().isBlank()) {
+                throw new IllegalArgumentException("El nombre del equipo es obligatorio");
+            }
+            team.setName(req.name().trim());
+        }
+
+        if (req.shortName() != null) {
+            team.setShortName(req.shortName().isBlank() ? null : req.shortName().trim());
+        }
+
+        if (req.colorPrimary() != null && !req.colorPrimary().isBlank()) {
+            team.setColorPrimary(req.colorPrimary().trim());
+        }
+
+        if (req.colorSecondary() != null && !req.colorSecondary().isBlank()) {
+            team.setColorSecondary(req.colorSecondary().trim());
+        }
+
+        team = equiposRepository.save(team);
+
+        if (req.categoryId() != null) {
+            changeDivision(team.getTeamId(), req.categoryId());
+        }
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("teamId", team.getTeamId());
+        out.put("name", team.getName());
+        out.put("shortName", team.getShortName());
+        out.put("colorPrimary", team.getColorPrimary());
+        out.put("colorSecondary", team.getColorSecondary());
+        out.put("categoryId", currentEnrollment(team.getTeamId()).map(e -> e.get("category_id")).orElse(null));
+        return out;
+    }
+
+    private java.util.Optional<Map<String, Object>> currentEnrollment(Integer teamId) {
+        List<Map<String, Object>> rows = jdbc.queryForList("""
+            SELECT enrollment_id, season_id, category_id
+            FROM public.team_enrollment
+            WHERE team_id = ?
+            ORDER BY season_id DESC
+            LIMIT 1
+        """, teamId);
+        return rows.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(rows.get(0));
+    }
+
+    private void changeDivision(Integer teamId, Integer newCategoryId) {
+        Map<String, Object> enrollment = currentEnrollment(teamId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "El equipo no tiene inscripción, no se le puede asignar división"));
+
+        Integer enrollmentId = ((Number) enrollment.get("enrollment_id")).intValue();
+        Integer seasonId = ((Number) enrollment.get("season_id")).intValue();
+        Integer oldCategoryId = ((Number) enrollment.get("category_id")).intValue();
+
+        if (oldCategoryId.equals(newCategoryId)) {
+            return; // sin cambio
+        }
+
+        CategoryModel oldCat = categoryRepository.findById(oldCategoryId.longValue())
+                .orElseThrow(() -> new IllegalArgumentException("La categoría actual del equipo no existe"));
+        CategoryModel newCat = categoryRepository.findById(newCategoryId.longValue())
+                .orElseThrow(() -> new IllegalArgumentException("La división elegida no existe"));
+
+        if (!sameBranch(oldCat, newCat)) {
+            throw new IllegalArgumentException(
+                    "Solo se puede mover al equipo entre divisiones de su misma categoría");
+        }
+
+        Integer games = jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM public.game
+            WHERE season_id = ?
+              AND (home_team_id = ? OR away_team_id = ?)
+              AND COALESCE(UPPER(status), '') <> 'CANCELLED'
+        """, Integer.class, seasonId, teamId, teamId);
+
+        if (games != null && games > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "No se puede cambiar de división: el equipo ya tiene " + games
+                            + (games == 1 ? " partido" : " partidos")
+                            + " en esta temporada. Bórralos primero o haz el cambio en la siguiente temporada.");
+        }
+
+        jdbc.update("""
+            UPDATE public.team_enrollment
+               SET category_id = ?
+             WHERE enrollment_id = ?
+        """, newCategoryId, enrollmentId);
+
+        // Su fila de la tabla (en ceros, porque no ha jugado) se mueve con el equipo.
+        int moved = jdbc.update("""
+            UPDATE public.standing_team
+               SET category_id = ?
+             WHERE season_id = ?
+               AND team_id = ?
+               AND category_id = ?
+        """, newCategoryId, seasonId, teamId, oldCategoryId);
+
+        if (moved == 0) {
+            jdbc.update("""
+                INSERT INTO public.standing_team
+                  (season_id, category_id, team_id, gp, wins, losses, draws,
+                   points_for, points_against, table_points)
+                VALUES (?, ?, ?, 0, 0, 0, 0, 0, 0, 0)
+                ON CONFLICT (season_id, category_id, team_id) DO NOTHING
+            """, seasonId, newCategoryId, teamId);
+        }
     }
 
     /**

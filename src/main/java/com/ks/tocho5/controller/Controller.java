@@ -385,6 +385,16 @@ public class Controller {
             String colorSecondary
     ) {}
 
+    // Edicion desde el panel admin. Campos en null = no se tocan.
+    // categoryId cambia la division (A/B) de la inscripcion actual.
+    public record AdminUpdateTeamRequest(
+            String name,
+            String shortName,
+            String colorPrimary,
+            String colorSecondary,
+            Integer categoryId
+    ) {}
+
     public record MyTeamSummary(
             Long userId,
             String role,
@@ -438,6 +448,17 @@ public class Controller {
             @RequestBody UpdateTeamRequest request
     ) {
         return teamService.updateTeamForCurrentUser(jwt, teamId.longValue(), request);
+    }
+
+    // ================= ADMIN / EDITAR EQUIPO =================
+    // Solo admin: datos del equipo y cambio de division A/B.
+    @PatchMapping("/admin/teams/{teamId}")
+    @PreAuthorize("hasRole('admin')")
+    public Map<String, Object> adminUpdateTeam(
+            @PathVariable Integer teamId,
+            @RequestBody AdminUpdateTeamRequest request
+    ) {
+        return teamService.adminUpdateTeam(teamId.longValue(), request);
     }
 
     // ================= LOGO =================
